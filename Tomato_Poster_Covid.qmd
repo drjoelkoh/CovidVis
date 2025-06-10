@@ -1,0 +1,23 @@
+---
+title: "Tomato Project: Covid Visualization"
+author: "Daniel Lip, Pierre Chan, Howard Yeo, Joel Koh, Jolie Yeo, Danish Dol, Sarah Loo"
+format: html
+editor: visual
+---
+
+
+```{r}
+# Load necessary libraries
+library(tidyverse)
+library(lubridate)
+```
+
+```{r}
+# Load the dataset
+covid_data <- read_csv("covid19_sg.csv")
+
+
+
+```
+
+
