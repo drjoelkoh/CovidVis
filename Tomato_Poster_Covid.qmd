@@ -246,7 +246,80 @@ monthly_bar
 
 ```{r}
 
+library(tidyverse)
+library(lubridate)
+library(scales)
 
+# 1) Load & filter Apr–Sep 2020
+df <- read_csv("covid19_sg.csv", col_types = cols(
+  Date = col_date(),
+  `Local cases residing in dorms MOH report`    = col_double(),
+  `Local cases not residing in doms MOH report` = col_double(),
+  Phase = col_character()
+)) %>%
+  filter(Date >= ymd("2020-04-01"), Date <= ymd("2020-09-30")) %>%
+  mutate(
+    dorm  = `Local cases residing in dorms MOH report`,
+    comm  = `Local cases not residing in doms MOH report`,
+    Month = floor_date(Date, "month")
+  )
+
+# 2) Summarise + build labels
+monthly <- df %>%
+  group_by(Month) %>%
+  summarise(
+    dorm  = sum(dorm, na.rm = TRUE),
+    comm  = sum(comm, na.rm = TRUE),
+    Phase = Phase %>% table() %>% which.max() %>% names()
+  ) %>%
+  ungroup() %>%
+  mutate(
+    label = paste0(format(Month, "%b %Y"), "\n(", Phase, ")")
+  )
+
+# 3) Pivot longer for ggplot
+monthly_long <- monthly %>%
+  select(label, dorm, comm) %>%
+  pivot_longer(c(dorm, comm),
+               names_to  = "Type",
+               values_to = "Count") %>%
+  mutate(
+    Type = recode(Type,
+                  dorm = "Dormitory cases",
+                  comm = "Community cases"),
+    label = factor(label, levels = monthly$label)  # preserve order
+  )
+
+# 4) Plot
+ggplot(monthly_long, aes(x = label, y = Count, fill = Type)) +
+  geom_col(position = position_dodge(width = 0.7),
+           width    = 0.6,
+           color    = "grey20") +
+  geom_text(aes(label = comma(Count)),
+            position = position_dodge(width = 0.7),
+            vjust    = -0.5,
+            size     = 3) +
+  scale_fill_manual(
+    values = c("Community cases" = "#ff7f0e",
+               "Dormitory cases" = "#1f77b4")
+  ) +
+  scale_y_continuous(
+    expand = expansion(mult = c(0, 0.05))
+  ) +
+  theme_light(base_size = 12) +
+  theme(
+    axis.text.x       = element_text(angle = 45, hjust = 1),
+    panel.grid.major.x = element_blank(),
+    panel.grid.minor   = element_blank(),
+    legend.position    = "top",
+    legend.title       = element_blank(),
+    plot.title         = element_text(face = "bold", hjust = 0.5, size = 14)
+  ) +
+  labs(
+    x     = "Month (Phase)",
+    y     = "Total Cases",
+    title = "COVID-19 Cases Apr–Sep 2020 by Month & Phase"
+  )
 
 
 ```
