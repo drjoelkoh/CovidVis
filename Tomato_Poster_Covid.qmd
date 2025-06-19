@@ -48,41 +48,119 @@ print(paste("Total 0 values after cleaning:", as.numeric(total_zeros_after)))
 ```
 
 ```{r}
-
-
+#| label: Time Series Line Chart (Dormitory vs Community)
 library(patchwork)
 library(zoo)
 
 # Filter data for focus period
 covid_focus <- covid_clean %>%
-  filter(Date >= as.Date("2020-04-20") & Date <= as.Date("2020-09-07")) %>%
+  filter(Date >= as.Date("2020-04-01") & Date <= as.Date("2020-09-30")) %>%
   select(Date,
          Dormitory = `Local cases residing in dorms MOH report`,
          Community = `Local cases not residing in doms MOH report`) %>%
   mutate(
     Dormitory_MA = rollmean(Dormitory, k = 7, fill = NA, align = "right"),
-    Community_MA = rollmean(Community, k = 7, fill = NA, align = "right")
+    Community_MA = rollmean(Community, k = 7, fill = NA, align = "right"),
+    Month = floor_date(Date, "month")
   )
+
+# Dynamically compute monthly peak rows
+dorm_peaks <- covid_focus %>%
+  group_by(Month) %>%
+  filter(Dormitory == max(Dormitory, na.rm = TRUE)) %>%
+  slice(1) %>%  # Ensure only one row per month
+  ungroup() %>%
+  mutate(Label = paste0(format(Date, "%b %d"), ": ", Dormitory, " cases"),
+         Month = floor_date(Month, "month"))  # Ensure it's 1st of month
+
+
+comm_peaks <- covid_focus %>%
+  group_by(Month) %>%
+  filter(Community == max(Community, na.rm = TRUE)) %>%
+  slice(1) %>%
+  ungroup() %>%
+  mutate(Label = paste0(format(Date, "%b %d"), ": ", Community, " cases"),
+         Month = floor_date(Month, "month"))
+
+# Point of interest (June 25)
+annotate_point <- as.Date("2020-06-25")
+annotate_y <- covid_focus %>% filter(Date == annotate_point) %>% pull(Dormitory_MA)
 
 # Plot 1: Dormitory Cases
 p1 <- ggplot(covid_focus, aes(x = Date)) +
-  geom_line(aes(y = Dormitory, color = "Daily Cases"), alpha = 0.4) +
-  geom_line(aes(y = Dormitory_MA, color = "Weekly Trend"), size = 1) +
-  geom_vline(xintercept = as.Date("2020-04-07"), linetype = "dashed", color = "black") +
-  geom_vline(xintercept = as.Date("2020-06-01"), linetype = "dashed", color = "black") +
-  annotate("text", x = as.Date("2020-04-10"), y = max(covid_focus$Dormitory, na.rm = TRUE),
-           label = "Start of Circuit Breaker", hjust = 0, vjust = -1.2, size = 3) +
-  annotate("text", x = as.Date("2020-06-04"), y = max(covid_focus$Dormitory, na.rm = TRUE),
-           label = "End of Circuit Breaker", hjust = 0, vjust = -1.2, size = 3) +
-  scale_color_manual(values = c("Daily Cases" = "steelblue", "Weekly Trend" = "navy")) +
+  geom_line(
+    aes(y = Dormitory, color = "Daily Cases"),
+    alpha = 0.4) +
+  geom_line(
+    aes(y = Dormitory_MA, color = "Weekly Trend"),
+    size = 1) +
+  geom_vline(
+    xintercept = as.Date("2020-04-07"),
+    linetype = "dashed",
+    color = "black") +
+  geom_vline(
+    xintercept = as.Date("2020-06-01"),
+    linetype = "dashed",
+    color = "black") +
+  geom_text(
+    data = dorm_peaks,
+    aes(x = Month, y = -20, label = Label),
+    inherit.aes = FALSE, 
+    vjust = -0.8, size = 3, color = "navy") +
+  geom_point(
+    aes(x = annotate_point, y = annotate_y), 
+    color = "navy", size = 2.5) + 
+   geom_segment(
+     aes(x = annotate_point, y = annotate_y, xend = annotate_point + 15, yend = annotate_y + 300),
+     arrow = arrow(length = unit(0.15, "cm")),
+     color = "navy", linetype = "dotted") +
+  annotate("text", 
+            x = as.Date("2020-04-10"), 
+            y = max(covid_focus$Dormitory, na.rm = TRUE),
+            label = "Start of Circuit Breaker",
+            hjust = 0, vjust = -1.2, size = 3) +
+  annotate("text",
+           x = as.Date("2020-06-04"),
+           y = max(covid_focus$Dormitory, na.rm = TRUE),
+           label = "End of Circuit Breaker",
+           hjust = 0, vjust = -1.2, size = 3) +
+  annotate("text",
+           x = annotate_point + 16,
+           y = annotate_y + 300,
+           label = "Aggressive testing & dorm clearance\n(MOH press release 25 Jun)",
+           hjust = 0, size = 3, color = "navy") +
+  scale_x_date(
+    breaks = seq(as.Date("2020-04-01"), as.Date("2020-09-30"), by = "1 month"),
+    date_labels = "%b",
+    limits = c(as.Date("2020-04-01"), as.Date("2020-09-30"))
+  ) +
+  scale_color_manual(
+    values = c("Daily Cases" = "steelblue", "Weekly Trend" = "navy")) +
   labs(
     title = "COVID-19 Cases in Migrant Worker Dormitories",
     subtitle = "Daily confirmed cases and weekly trend (Apr–Sep 2020)",
-    caption = "Weekly trend is a 7-day moving average used to smooth daily fluctuations.",
-    y = "Dormitory Cases", x = NULL, color = NULL
-  ) +
+    caption = "- Weekly trend is a 7-day moving average used to smooth daily fluctuations.\n- Labeled dates indicate the highest number of cases recorded each month.",
+    y = "Dormitory Cases", x = NULL, color = NULL) +
   theme_minimal() +
   theme(legend.position = "top")
+
+
+# April spike annotation for Dormitory cases
+combined_apr <- as.Date("2020-04-20")
+combined_apr_y <- covid_focus %>% filter(Date == combined_apr) %>% pull(Dormitory_MA)
+
+p1 <- p1 +
+  geom_point(aes(x = combined_apr, y = combined_apr_y), color = "navy", size = 2.5) +
+  geom_segment(aes(x = combined_apr, y = combined_apr_y,
+                   xend = combined_apr + 17, yend = combined_apr_y + 350), arrow = arrow(length = unit(0.15, "cm")), color = "navy", linetype = "dotted") +
+  annotate("text",
+           x = combined_apr + 18,
+           y = combined_apr_y + 350,
+           label = "Record spike driven by ramped-up\ndormitory testing (Apr 20–28, MOH)",
+           hjust = 0, size = 3, color = "navy")
+
+
+
 
 # Plot 2: Community Cases
 p2 <- ggplot(covid_focus, aes(x = Date)) +
@@ -90,26 +168,35 @@ p2 <- ggplot(covid_focus, aes(x = Date)) +
   geom_line(aes(y = Community_MA, color = "Weekly Trend"), size = 1) +
   geom_vline(xintercept = as.Date("2020-04-07"), linetype = "dashed", color = "black") +
   geom_vline(xintercept = as.Date("2020-06-01"), linetype = "dashed", color = "black") +
+  geom_text(data = comm_peaks, aes(x = Month, y = -20, label = Label),
+          inherit.aes = FALSE, vjust = -0.8, size = 3, color = "firebrick") +
   annotate("text", x = as.Date("2020-04-10"), y = max(covid_focus$Community, na.rm = TRUE),
            label = "Start of Circuit Breaker", hjust = 0, vjust = -1.2, size = 3) +
   annotate("text", x = as.Date("2020-06-04"), y = max(covid_focus$Community, na.rm = TRUE),
            label = "End of Circuit Breaker", hjust = 0, vjust = -1.2, size = 3) +
+  scale_x_date(
+    breaks = seq(as.Date("2020-04-01"), as.Date("2020-09-30"), by = "1 month"),
+    date_labels = "%b",
+    limits = c(as.Date("2020-04-01"), as.Date("2020-09-30"))
+  ) +
   scale_color_manual(values = c("Daily Cases" = "darkred", "Weekly Trend" = "firebrick")) +
   labs(
     title = "COVID-19 Cases in the Community",
     subtitle = "Daily confirmed cases and weekly trend (Apr–Sep 2020)",
-    caption = "Weekly trend is a 7-day moving average used to smooth daily fluctuations.",
+    caption = "- Weekly trend is a 7-day moving average used to smooth daily fluctuations.\n- Labeled dates indicate the highest number of cases recorded each month.",
     y = "Community Cases", x = "Date", color = NULL
   ) +
   theme_minimal() +
   theme(legend.position = "top")
 
-# Combine both plots
-final_plot <- p1 / p2 + plot_layout(heights = c(3, 1.2))
+# Save each plot separately
+ggsave("covid_dormitory_plot.png", p1, width = 12, height = 6)
+ggsave("covid_community_plot.png", p2, width = 12, height = 6)
 
-# Save and show
-ggsave("covid_cases_final_with_caption.png", final_plot, width = 12, height = 9)
-final_plot
+# Optionally display each one in sequence
+p1
+p2
+
 
 
 
@@ -118,7 +205,7 @@ final_plot
 ```
 
 ```{r}
-
+#| label: Monthly cases bar plot (Dormitory vs Community)
 library(scales)
 
 # Prepare monthly summary
@@ -154,5 +241,12 @@ monthly_bar <- ggplot(monthly_cases, aes(x = Month, y = Cases, fill = Group)) +
 # Save and view
 ggsave("monthly_covid_cases_grouped.png", monthly_bar, width = 10, height = 6)
 monthly_bar
+
+```
+
+```{r}
+
+
+
 
 ```
