@@ -48,6 +48,22 @@ print(paste("Total 0 values after cleaning:", as.numeric(total_zeros_after)))
 ```
 
 ```{r}
+# Define fixed population and land area values (2020)
+dorm_population <- 311100
+dorm_land_area <- 5.0
+community_population <- 5685807
+community_land_area <- 723.3  # 728.3 - 5.0
+
+# Add density-adjusted rates to the dataset
+covid_clean <- covid_clean %>%
+  mutate(
+    dorm_cases_density_rate = (`Local cases residing in dorms MOH report` / dorm_population) * 100000 / dorm_land_area,
+    community_cases_density_rate = (`Local cases not residing in doms MOH report` / community_population) * 100000 / community_land_area
+  )
+
+```
+
+```{r}
 #| label: Time Series Line Chart (Dormitory vs Community)
 library(patchwork)
 library(zoo)
@@ -320,6 +336,108 @@ ggplot(monthly_long, aes(x = label, y = Count, fill = Type)) +
     y     = "Total Cases",
     title = "COVID-19 Cases Apr–Sep 2020 by Month & Phase"
   )
+
+
+```
+
+```{r}
+library(tidyr)
+library(ggplot2)
+
+# Prepare long-form data
+covid_long <- covid_clean %>%
+  select(Date, dorm_cases_density_rate, community_cases_density_rate) %>%
+  pivot_longer(cols = -Date, names_to = "Group", values_to = "Rate") %>%
+  mutate(
+    Date = as.Date(Date),
+    Group = recode(Group,
+                   "dorm_cases_density_rate" = "Dormitories",
+                   "community_cases_density_rate" = "Community")
+  ) %>%
+  filter(Date >= as.Date("2020-04-01") & Date <= as.Date("2020-09-30"))
+
+# Find dormitory peak
+peak_dorm <- covid_long %>%
+  filter(Group == "Dormitories") %>%
+  filter(Rate == max(Rate, na.rm = TRUE)) %>%
+  slice(1)
+
+peak_date <- peak_dorm$Date
+peak_rate <- peak_dorm$Rate
+
+# Plot
+density_plot <- ggplot(covid_long, aes(x = Date, y = Rate, color = Group)) +
+  geom_line(size = 0.8) +
+
+  # LOESS smoothing for Dormitories only
+  geom_smooth(
+    data = covid_long %>% filter(Group == "Dormitories"),
+    aes(x = Date, y = Rate),
+    se = FALSE, method = "loess", span = 0.2,
+    color = "steelblue", size = 1
+  ) +
+
+  # Label the LOESS line
+  annotate("text", x = as.Date("2020-08-15"), y = 18,
+           label = "LOESS (Dormitories)", color = "steelblue", size = 3.5, hjust = 0) +
+
+  # Peak dorm point and label
+  geom_point(data = peak_dorm, aes(x = Date, y = Rate), color = "steelblue", size = 2.5) +
+  annotate("text",
+           x = peak_date + 5,
+           y = peak_rate,
+           label = paste0("Peak: ", round(peak_rate, 1), "\ncases/100k/km²"),
+           hjust = 0,
+           size = 3.5,
+           color = "steelblue") +
+
+  # Color scale
+  scale_color_manual(values = c("Dormitories" = "steelblue", "Community" = "firebrick")) +
+
+  # Axis setup
+  scale_x_date(
+    breaks = seq(as.Date("2020-04-01"), as.Date("2020-09-30"), by = "1 month"),
+    date_labels = "%b",
+    limits = c(as.Date("2020-04-01"), as.Date("2020-09-30"))
+  ) +
+
+  # Circuit Breaker vertical lines and horizontal labels
+  geom_vline(xintercept = as.Date("2020-04-07"), linetype = "dashed", color = "black") +
+  geom_vline(xintercept = as.Date("2020-06-01"), linetype = "dashed", color = "black") +
+  annotate("text", x = as.Date("2020-04-07"), y = 88,
+           label = "Start of Circuit Breaker", size = 3, color = "black", hjust = 0.5) +
+  annotate("text", x = as.Date("2020-06-01"), y = 88,
+           label = "End of Circuit Breaker", size = 3, color = "black", hjust = 0.5) +
+
+  # Disparity annotation
+  annotate("text", x = as.Date("2020-06-01"), y = 55,
+           label = "Dormitories had up to\n80× higher intensity",
+           color = "steelblue", size = 4, hjust = 0) +
+
+  # Styling with expanded margins
+  theme_minimal(base_size = 14) +
+  theme(
+    legend.position = "top",
+    plot.title = element_text(face = "bold", size = 16),
+    plot.subtitle = element_text(size = 13),
+    plot.margin = margin(t = 20, r = 20, b = 20, l = 20)
+  ) +
+  labs(
+    title = "COVID-19 Case Rates Adjusted for Population Density",
+    subtitle = "Cases per 100,000 people per km² (Apr–Sep 2020)",
+    x = "Date",
+    y = "Density-Adjusted Case Rate",
+    color = "Population Group"
+  )
+
+# Save the plot (JPG or PNG)
+ggsave("covid_density_rates_sg.png",
+       plot = density_plot,
+       width = 10, height = 6, dpi = 300,
+       device = "png", bg = "white")
+
+# Optionally display
+density_plot
 
 
 ```
