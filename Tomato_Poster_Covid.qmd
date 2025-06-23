@@ -307,7 +307,7 @@ monthly_long <- monthly %>%
   )
 
 # 4) Plot
-ggplot(monthly_long, aes(x = label, y = Count, fill = Type)) +
+month_phase_plot <- ggplot(monthly_long, aes(x = label, y = Count, fill = Type)) +
   geom_col(position = position_dodge(width = 0.7),
            width    = 0.6,
            color    = "grey20") +
@@ -337,7 +337,11 @@ ggplot(monthly_long, aes(x = label, y = Count, fill = Type)) +
     title = "COVID-19 Cases Apr–Sep 2020 by Month & Phase"
   )
 
+ggsave("covid_cases_by_month_phase.png", plot = month_phase_plot,
+       width = 10, height = 6, dpi = 300,
+       device = "png", bg = "white")
 
+month_phase_plot
 ```
 
 ```{r}
