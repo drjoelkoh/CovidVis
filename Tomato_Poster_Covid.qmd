@@ -445,3 +445,88 @@ density_plot
 
 
 ```
+
+```{r}
+png("covid_severity_radar.png", width = 1200, height = 800, res = 150)
+
+library(tidyverse)
+library(fmsb)
+library(lubridate)
+
+# Summarise total counts
+covid_severity_summary <- covid_clean %>%
+  filter(Date >= as.Date("2020-04-01") & Date <= as.Date("2020-09-30")) %>%
+  summarise(
+    TotalDeaths = sum(`Daily Deaths`, na.rm = TRUE),
+    TotalICU = sum(`Intensive Care Unit (ICU)`, na.rm = TRUE),
+    TotalHospitalised = sum(`Still Hospitalised`, na.rm = TRUE)
+  )
+
+# Log-transform + scale to [0,100]
+log_scaled <- covid_severity_summary %>%
+  mutate(
+    Deaths = log1p(TotalDeaths),
+    ICU = log1p(TotalICU),
+    Hospitalised = log1p(TotalHospitalised)
+  ) %>%
+  select(Deaths, ICU, Hospitalised)
+
+log_max <- max(log_scaled)
+scaled_values <- log_scaled / log_max * 100
+scaled_values <- round(scaled_values, 2)
+
+# Prepare radar data
+radar_data <- rbind(
+  c(100, 100, 100),               # Max
+  c(0, 0, 0),                     # Min
+  as.numeric(scaled_values)      # Actual values
+)
+radar_data <- as.data.frame(radar_data)
+colnames(radar_data) <- c("", "", "")
+rownames(radar_data) <- c("Max", "Min", "Severity")
+
+# Radar chart
+radarchart(
+  radar_data,
+  axistype = 1,
+  pcol = "darkred",
+  pfcol = rgb(0.8, 0.2, 0.2, 0.4),
+  plwd = 2,
+  plty = 1,
+  title = "COVID-19 Severity Radar: Apr–Sep 2020 (Log Scaled 0–100)",
+  cglcol = "grey70", cglty = 1, cglwd = 0.8,
+  axislabcol = "grey20",
+  caxislabels = seq(0, 100, by = 25),
+  vlcex = 0.9
+)
+
+# Add raw values next to axis labels
+label_angles_deg <- c(90, 210, 330)
+label_angles_rad <- label_angles_deg * pi / 180
+label_radius <- 1.15  # place labels slightly outside the radar
+
+label_texts <- c(
+  paste0("Deaths (", covid_severity_summary$TotalDeaths, ")"),
+  paste0("ICU (", covid_severity_summary$TotalICU, ")"),
+  paste0("Hospitalised (", covid_severity_summary$TotalHospitalised, ")")
+)
+
+for (i in 1:3) {
+  x <- label_radius * cos(label_angles_rad[i])
+  y <- label_radius * sin(label_angles_rad[i])
+  text(x, y, labels = label_texts[i], cex = 0.9, font = 2)
+}
+
+# === Legends ===
+legend("topright",
+       legend = c("Proportional Severity"),
+       col = "darkred", lty = 1, lwd = 2, bty = "n")
+
+legend("bottomleft",
+       legend = c("0 = Lowest log-scaled severity", "100 = Highest log-scaled severity"),
+       text.col = "grey20", bty = "n", cex = 0.8)
+
+dev.off()
+
+
+```
