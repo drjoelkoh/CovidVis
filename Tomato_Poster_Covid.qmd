@@ -386,6 +386,19 @@ peak_dorm <- covid_long %>%
 peak_date <- peak_dorm$Date
 peak_rate <- peak_dorm$Rate
 
+# Define phase dates and rectangles for background coloring
+phase_rectangles <- tibble(
+  xmin = as.Date(c("2020-04-01", "2020-04-07", "2020-06-01", "2020-06-19", 
+                   "2020-12-28", "2021-05-16", "2021-08-10", "2021-10-01")),
+  xmax = as.Date(c("2020-04-07", "2020-06-01", "2020-06-19", "2020-12-28",
+                   "2021-05-16", "2021-08-10", "2021-10-01", "2021-12-31")),
+  Phase = c("Pre-Circuit Breaker", "Circuit Breaker", "Phase 1", "Phase 2", 
+            "Phase 3", "Heightened Alert", "Preparatory Stage", "Stabilisation/Transition Phase"),
+  # Choose colors similar to wildfire chart - you can adjust these
+  fill_color = c("#E8F5E8", "#FFE4E1", "#E6F3FF", "#F0E6FF", 
+                 "#FFF8DC", "#FFE4B5", "#E0FFE0", "#F5F5DC")
+)
+
 # Define phase dates and labels
 phase_dates <- tibble(
   Date = as.Date(c("2020-04-07", "2020-06-01", "2020-06-19", "2020-12-28",
@@ -400,6 +413,16 @@ label_y <- max_y * 0.6  # lower the phase labels to 60% height
 
 # Plot
 density_plot <- ggplot(covid_long, aes(x = Date, y = Rate, color = Group)) +
+  
+  # Add colored background rectangles
+  geom_rect(data = phase_rectangles, 
+            aes(xmin = xmin, xmax = xmax, ymin = -Inf, ymax = Inf, fill = Phase),
+            inherit.aes = FALSE, alpha = 0.3) +
+  
+   # Add manual fill scale for the rectangles
+  scale_fill_manual(values = setNames(phase_rectangles$fill_color, phase_rectangles$Phase),
+                    name = "Phase", guide = "none") +
+  
   geom_line(size = 0.8) +
 
   # Peak dorm point and label
@@ -414,7 +437,7 @@ density_plot <- ggplot(covid_long, aes(x = Date, y = Rate, color = Group)) +
 
   # Phase vertical lines
   geom_vline(data = phase_dates, aes(xintercept = Date),
-             linetype = "dashed", color = "black") +
+             linetype = "dashed", color = "black", alpha = 0.7) +
 
   # Phase labels (rotated and shifted down)
   geom_text(
@@ -444,7 +467,9 @@ density_plot <- ggplot(covid_long, aes(x = Date, y = Rate, color = Group)) +
     legend.position = "top",
     plot.title = element_text(face = "bold", size = 16),
     plot.subtitle = element_text(size = 13),
-    plot.margin = margin(t = 40, r = 20, b = 20, l = 20)
+    plot.margin = margin(t = 40, r = 20, b = 20, l = 20),
+    panel.grid.major = element_line(color = alpha("black", 0.1), size = 0.5),
+    panel.grid.minor = element_line(color = alpha("black", 0.05), size = 0.3)
   ) +
   labs(
     title = "COVID-19 Case Rates Adjusted for Population Density",
