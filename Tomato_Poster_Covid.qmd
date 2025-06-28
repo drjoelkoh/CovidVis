@@ -362,6 +362,8 @@ month_phase_plot
 ```
 
 ```{r}
+#|label: Population density based
+
 library(tidyverse)
 library(lubridate)
 
@@ -375,7 +377,11 @@ covid_long <- covid_clean %>%
                    "dorm_cases_density_rate" = "Dormitories",
                    "community_cases_density_rate" = "Community")
   ) %>%
-  filter(Date >= as.Date("2020-04-01") & Date <= as.Date("2021-12-31"))
+  filter(Date >= as.Date("2020-04-01") & Date <= as.Date("2021-12-31")) %>%
+  mutate(
+  Rate_trans = sqrt(Rate)
+  )
+
 
 # Find dormitory peak
 peak_dorm <- covid_long %>%
@@ -386,7 +392,7 @@ peak_dorm <- covid_long %>%
 peak_date <- peak_dorm$Date
 peak_rate <- peak_dorm$Rate
 
-# Define phase dates and rectangles for background coloring
+# Define phase rectangles for background
 phase_rectangles <- tibble(
   xmin = as.Date(c("2020-04-01", "2020-04-07", "2020-06-01", "2020-06-19", 
                    "2020-12-28", "2021-05-16", "2021-08-10", "2021-10-01")),
@@ -394,7 +400,6 @@ phase_rectangles <- tibble(
                    "2021-05-16", "2021-08-10", "2021-10-01", "2021-12-31")),
   Phase = c("Pre-Circuit Breaker", "Circuit Breaker", "Phase 1", "Phase 2", 
             "Phase 3", "Heightened Alert", "Preparatory Stage", "Stabilisation/Transition Phase"),
-  # Choose colors similar to wildfire chart - you can adjust these
   fill_color = c("#E8F5E8", "#FFE4E1", "#E6F3FF", "#F0E6FF", 
                  "#FFF8DC", "#FFE4B5", "#E0FFE0", "#F5F5DC")
 )
@@ -407,39 +412,33 @@ phase_dates <- tibble(
             "Heightened Alert", "Preparatory Stage", "Stabilisation Phase", "Transition Phase")
 )
 
-# Determine y-limit to place labels lower
-max_y <- max(covid_long$Rate, na.rm = TRUE)
-label_y <- max_y * 0.6  # lower the phase labels to 60% height
+max_y <- max(covid_long$Rate_trans, na.rm = TRUE)
+label_y <- max_y * 0.6
 
 # Plot
-density_plot <- ggplot(covid_long, aes(x = Date, y = Rate, color = Group)) +
+density_plot <- ggplot(covid_long, aes(x = Date, y = Rate_trans, color = Group)) +
   
-  # Add colored background rectangles
   geom_rect(data = phase_rectangles, 
             aes(xmin = xmin, xmax = xmax, ymin = -Inf, ymax = Inf, fill = Phase),
             inherit.aes = FALSE, alpha = 0.3) +
   
-   # Add manual fill scale for the rectangles
   scale_fill_manual(values = setNames(phase_rectangles$fill_color, phase_rectangles$Phase),
                     name = "Phase", guide = "none") +
   
   geom_line(size = 0.8) +
-
-  # Peak dorm point and label
-  geom_point(data = peak_dorm, aes(x = Date, y = Rate), color = "steelblue", size = 2.5) +
+  
+  geom_point(data = peak_dorm, aes(x = Date, y = sqrt(Rate)), color = "steelblue", size = 2.5) +
   annotate("text",
            x = peak_date + 5,
-           y = peak_rate,
+           y = sqrt(peak_rate),
            label = paste0("Peak: ", round(peak_rate, 1), "\ncases/100k/km²"),
            hjust = 0,
            size = 3.5,
            color = "steelblue") +
 
-  # Phase vertical lines
   geom_vline(data = phase_dates, aes(xintercept = Date),
              linetype = "dashed", color = "black", alpha = 0.7) +
 
-  # Phase labels (rotated and shifted down)
   geom_text(
     data = phase_dates,
     aes(x = Date - 6, y = label_y, label = Phase),
@@ -451,17 +450,14 @@ density_plot <- ggplot(covid_long, aes(x = Date, y = Rate, color = Group)) +
     color = "black"
   ) +
 
-  # Color scale
   scale_color_manual(values = c("Dormitories" = "steelblue", "Community" = "firebrick")) +
 
-  # Axis setup
   scale_x_date(
     breaks = seq(as.Date("2020-04-01"), as.Date("2021-12-31"), by = "3 months"),
     date_labels = "%b\n%Y",
     limits = c(as.Date("2020-04-01"), as.Date("2021-12-31"))
   ) +
 
-  # Styling
   theme_minimal(base_size = 14) +
   theme(
     legend.position = "top",
@@ -475,13 +471,12 @@ density_plot <- ggplot(covid_long, aes(x = Date, y = Rate, color = Group)) +
     title = "COVID-19 Case Rates Adjusted for Population Density",
     subtitle = "Cases per 100,000 people per km² (Apr 2020 – Dec 2021)",
     x = "Date",
-    y = "Density-Adjusted Case Rate",
+    y = "Density-Adjusted Case Rate\n(Sqrt transform applied to Dormitory cases)",
     color = "Population Group"
   )
 
 # Save the plot
-ggsave("covid_density_rates_sg_phases_shifted_down.png",
-       plot = density_plot,
+ggsave("covid_density_sqrt_scaled.png", plot = density_plot,
        width = 11, height = 6.5, dpi = 300,
        device = "png", bg = "white")
 
@@ -489,11 +484,11 @@ ggsave("covid_density_rates_sg_phases_shifted_down.png",
 density_plot
 
 
-
-
 ```
 
 ```{r}
+#| label: Severity Radar chart (Deaths, ICU, Hospitalised rates)
+
 png("covid_severity_radar.png", width = 1200, height = 800, res = 150)
 
 library(tidyverse)
@@ -575,5 +570,117 @@ legend("bottomleft",
 
 dev.off()
 
+
+```
+
+```{r}
+#| label: Population Based Chart
+
+library(tidyverse)
+library(lubridate)
+
+# Define population sizes
+pop_dorm <- 300000
+pop_comm <- 5700000
+
+# Create long-form data with per 100k transformation
+covid_long <- covid_clean %>%
+  transmute(
+    Date = as.Date(Date),
+    Dormitories = `Local cases residing in dorms MOH report` / pop_dorm * 1e5,
+    Community = `Local cases not residing in doms MOH report` / pop_comm * 1e5
+  ) %>%
+  pivot_longer(cols = c("Dormitories", "Community"), names_to = "Group", values_to = "Rate") %>%
+  filter(Date >= as.Date("2020-04-01") & Date <= as.Date("2021-12-31"))
+
+# Find dormitory peak
+peak_dorm <- covid_long %>%
+  filter(Group == "Dormitories") %>%
+  filter(Rate == max(Rate, na.rm = TRUE)) %>%
+  slice(1)
+
+peak_date <- peak_dorm$Date
+peak_rate <- peak_dorm$Rate
+
+# Define background phase rectangles
+phase_rectangles <- tibble(
+  xmin = as.Date(c("2020-04-01", "2020-04-07", "2020-06-01", "2020-06-19", 
+                   "2020-12-28", "2021-05-16", "2021-08-10", "2021-10-01")),
+  xmax = as.Date(c("2020-04-07", "2020-06-01", "2020-06-19", "2020-12-28",
+                   "2021-05-16", "2021-08-10", "2021-10-01", "2021-12-31")),
+  Phase = c("Pre-Circuit Breaker", "Circuit Breaker", "Phase 1", "Phase 2", 
+            "Phase 3", "Heightened Alert", "Preparatory Stage", "Stabilisation/Transition Phase"),
+  fill_color = c("#E8F5E8", "#FFE4E1", "#E6F3FF", "#F0E6FF", 
+                 "#FFF8DC", "#FFE4B5", "#E0FFE0", "#F5F5DC")
+)
+
+phase_dates <- tibble(
+  Date = as.Date(c("2020-04-07", "2020-06-01", "2020-06-19", "2020-12-28",
+                   "2021-05-16", "2021-08-10", "2021-10-01", "2021-12-27")),
+  Phase = c("Circuit Breaker", "Phase 1", "Phase 2", "Phase 3",
+            "Heightened Alert", "Preparatory Stage", "Stabilisation Phase", "Transition Phase")
+)
+
+max_y <- max(covid_long$Rate, na.rm = TRUE)
+label_y <- max_y * 0.6
+
+# Plot
+plot_per100k <- ggplot(covid_long, aes(x = Date, y = Rate, color = Group)) +
+  geom_rect(data = phase_rectangles, 
+            aes(xmin = xmin, xmax = xmax, ymin = -Inf, ymax = Inf, fill = Phase),
+            inherit.aes = FALSE, alpha = 0.3) +
+  scale_fill_manual(values = setNames(phase_rectangles$fill_color, phase_rectangles$Phase),
+                    name = "Phase", guide = "none") +
+  geom_line(size = 0.8) +
+  geom_point(data = peak_dorm, aes(x = Date, y = Rate), color = "steelblue", size = 2.5) +
+  annotate("text",
+           x = peak_date + 5,
+           y = peak_rate,
+           label = paste0("Peak: ", round(peak_rate, 1), "\ncases/100k"),
+           hjust = 0,
+           size = 3.5,
+           color = "steelblue") +
+  geom_vline(data = phase_dates, aes(xintercept = Date),
+             linetype = "dashed", color = "black", alpha = 0.7) +
+  geom_text(
+    data = phase_dates,
+    aes(x = Date - 6, y = label_y, label = Phase),
+    inherit.aes = FALSE,
+    angle = 90,
+    hjust = 1,
+    vjust = 0.5,
+    size = 3.2,
+    color = "black"
+  ) +
+  scale_color_manual(values = c("Dormitories" = "steelblue", "Community" = "firebrick")) +
+  scale_x_date(
+    breaks = seq(as.Date("2020-04-01"), as.Date("2021-12-31"), by = "3 months"),
+    date_labels = "%b\n%Y",
+    limits = c(as.Date("2020-04-01"), as.Date("2021-12-31"))
+  ) +
+  theme_minimal(base_size = 14) +
+  theme(
+    legend.position = "top",
+    plot.title = element_text(face = "bold", size = 16),
+    plot.subtitle = element_text(size = 13),
+    plot.margin = margin(t = 40, r = 20, b = 20, l = 20),
+    panel.grid.major = element_line(color = alpha("black", 0.1), size = 0.5),
+    panel.grid.minor = element_line(color = alpha("black", 0.05), size = 0.3)
+  ) +
+  labs(
+    title = "COVID-19 Case Rates Adjusted per 100,000 People",
+    subtitle = "Cases per 100,000 people (Apr 2020 – Dec 2021)",
+    x = "Date",
+    y = "Case Rate per 100,000",
+    color = "Population Group"
+  )
+
+# Save the plot
+ggsave("covid_cases_per100k.png", plot = plot_per100k,
+       width = 11, height = 6.5, dpi = 300,
+       device = "png", bg = "white")
+
+# Display
+plot_per100k
 
 ```
