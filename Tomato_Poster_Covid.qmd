@@ -363,7 +363,6 @@ month_phase_plot
 
 ```{r}
 #|label: Population density based
-
 library(tidyverse)
 library(lubridate)
 
@@ -379,9 +378,8 @@ covid_long <- covid_clean %>%
   ) %>%
   filter(Date >= as.Date("2020-04-01") & Date <= as.Date("2021-12-31")) %>%
   mutate(
-  Rate_trans = sqrt(Rate)
+    Rate_trans = sqrt(Rate)
   )
-
 
 # Find dormitory peak
 peak_dorm <- covid_long %>%
@@ -415,13 +413,12 @@ phase_dates <- tibble(
 max_y <- max(covid_long$Rate_trans, na.rm = TRUE)
 label_y <- max_y * 0.6
 
-# Plot
+# Plot with annotations for spikes/drops
 density_plot <- ggplot(covid_long, aes(x = Date, y = Rate_trans, color = Group)) +
   
   geom_rect(data = phase_rectangles, 
             aes(xmin = xmin, xmax = xmax, ymin = -Inf, ymax = Inf, fill = Phase),
             inherit.aes = FALSE, alpha = 0.3) +
-  
   scale_fill_manual(values = setNames(phase_rectangles$fill_color, phase_rectangles$Phase),
                     name = "Phase", guide = "none") +
   
@@ -436,9 +433,9 @@ density_plot <- ggplot(covid_long, aes(x = Date, y = Rate_trans, color = Group))
            size = 3.5,
            color = "steelblue") +
 
+  # Phase boundaries and labels
   geom_vline(data = phase_dates, aes(xintercept = Date),
              linetype = "dashed", color = "black", alpha = 0.7) +
-
   geom_text(
     data = phase_dates,
     aes(x = Date - 6, y = label_y, label = Phase),
@@ -449,6 +446,33 @@ density_plot <- ggplot(covid_long, aes(x = Date, y = Rate_trans, color = Group))
     size = 3.2,
     color = "black"
   ) +
+
+  # Annotations for key periods and causes
+  annotate("text",
+           x = as.Date("2020-04-14"),
+           y = 3,
+           label = "Dormitory \noutbreak &\nCircuit Breaker \nstarts\n(Circuit Breaker\nmeasures,strict\nquarantine &\nmass testing\nled to rapid\ndecline in\ndormitory\ncases)",
+           hjust = 0, size = 2.5, color = "darkred") +
+  annotate("text",
+           x = as.Date("2021-09-01") - 20,
+           y = 8,
+           label = "Sept 2021\nspike:\nResurgence\nafter easing\nrestrictions,\nbreakthrough\ninfections\namong elderly\n& vulnerable",
+           hjust = 0, size = 2.8, color = "darkred") +
+  annotate("text",
+           x = as.Date("2020-07-30") - 20,
+           y = 8.75, 
+           label = "July 2020 spike: Dormitory mass testing\nramp-up \n'Backlog' of asymptomatic cases detected\nas dorms cleared for return to work",
+           hjust = 0, size = 3, color = "darkred") +
+  annotate("text",
+           x = as.Date("2020-08-20") - 8,
+           y = 5,
+           label = "Dormitories cleared by Aug 2020:\nMass outbreaks ended; most\nworkers recovered or isolated. Strict\nreturn-to-work protocols and regular\nsurveillance testing causes drop\nin dormitory case rates.",
+           hjust = 0, size = 2.8, color = "darkgreen") +
+  annotate("text",
+           x = as.Date("2021-9-27") + 5,
+           y = 8.2,
+           label = "Tighter restrictions:\nGroup sizes cut to 2,\nWFH default,\nschools on HBL,\nreduced dine-in/event\nsizes & strong protection\nfor vulnerable groups\ncauses drop in cases",
+           hjust = 0, size = 2.8, color = "darkgreen") +
 
   scale_color_manual(values = c("Dormitories" = "steelblue", "Community" = "firebrick")) +
 
@@ -476,12 +500,13 @@ density_plot <- ggplot(covid_long, aes(x = Date, y = Rate_trans, color = Group))
   )
 
 # Save the plot
-ggsave("covid_density_sqrt_scaled.png", plot = density_plot,
+ggsave("covid_density_sqrt_scaled_annotated.png", plot = density_plot,
        width = 11, height = 6.5, dpi = 300,
        device = "png", bg = "white")
 
 # Display
 density_plot
+
 
 
 ```
@@ -684,3 +709,136 @@ ggsave("covid_cases_per100k.png", plot = plot_per100k,
 plot_per100k
 
 ```
+```{r}
+library(tidyverse)
+library(lubridate)
+library(ggnewscale)
+
+# 1. Population sizes
+pop_dorm <- 300000
+pop_comm <- 5700000
+
+# 2. Full calendar (all dates, all groups)
+calendar_grid <- expand_grid(
+  Date = seq(as.Date("2020-04-01"), as.Date("2021-12-31"), by = "day"),
+  Group = c("Dormitories", "Community")
+) %>%
+  mutate(
+    Year = year(Date),
+    Month_num = month(Date),
+    Month = month(Date, label = TRUE, abbr = TRUE),
+    Day = day(Date)
+  )
+
+# 3. Cases per 100k, merged into calendar grid
+case_data <- covid_clean %>%
+  transmute(
+    Date = as.Date(Date),
+    Dormitories = `Local cases residing in dorms MOH report` / pop_dorm * 1e5,
+    Community = `Local cases not residing in doms MOH report` / pop_comm * 1e5
+  ) %>%
+  pivot_longer(cols = c("Dormitories", "Community"), 
+               names_to = "Group", values_to = "Rate")
+
+calendar_data <- calendar_grid %>%
+  left_join(case_data, by = c("Date", "Group")) %>%
+  mutate(Rate = replace_na(Rate, 0))
+
+# 4. Normalize Rate within each group and filter for Apr-Dec 2020, Jan-Dec 2021
+calendar_data <- calendar_data %>%
+  group_by(Group) %>%
+  mutate(RelRate = Rate / max(Rate, na.rm = TRUE)) %>%
+  ungroup() %>%
+  filter((Year == 2020 & Month_num >= 4) | (Year == 2021 & Month_num >= 1))
+
+# 5. Phase information
+phase_rects <- tibble(
+  xmin = as.Date(c("2020-04-01", "2020-04-07", "2020-06-01", "2020-06-19", 
+                   "2020-12-28", "2021-05-16", "2021-08-10", "2021-10-01")),
+  xmax = as.Date(c("2020-04-07", "2020-06-01", "2020-06-19", "2020-12-28",
+                   "2021-05-16", "2021-08-10", "2021-10-01", "2021-12-31")),
+  Phase = c("Pre-Circuit Breaker", "Circuit Breaker", "Phase 1", "Phase 2", 
+            "Phase 3", "Heightened Alert", "Preparatory Stage", "Stabilisation/Transition Phase"),
+  fill_color = c(
+    "#808080", "#e6194B", "#4363d8", "#3cb44b", 
+    "#ffe119", "#f58231", "#911eb4", "#42d4f4")
+)
+
+# 6. Expand each phase to all dates covered by that phase
+phase_days <- phase_rects %>%
+  rowwise() %>%
+  mutate(Date = list(seq(xmin, xmax, by = "day"))) %>%
+  unnest(Date) %>%
+  select(Date, Phase, fill_color) %>%
+  filter(Date >= as.Date("2020-04-01") & Date <= as.Date("2021-12-31")) %>%
+  expand_grid(Group = c("Dormitories", "Community")) %>%
+  mutate(
+    Year = year(Date),
+    Month_num = month(Date),
+    Day = day(Date)
+  ) %>%
+  filter((Year == 2020 & Month_num >= 4) | (Year == 2021 & Month_num >= 1))
+
+# 7. Plot
+calendar_plot <- ggplot() +
+  # Phase background per day, per group, per year (full cell)
+  geom_raster(
+    data = phase_days,
+    aes(x = Month_num, y = Day, fill = Phase),
+    alpha = 0.2
+  ) +
+  scale_fill_manual(
+    values = setNames(phase_rects$fill_color, phase_rects$Phase),
+    guide = guide_legend(
+      title = "Phase",
+      nrow = 2,        # 2 rows to save space
+      keywidth = 1,    # smaller color boxes
+      keyheight = 0.5, # smaller color boxes
+      title.position = "top"
+    ),
+    na.value = NA
+  ) +
+  ggnewscale::new_scale_fill() +
+  # Data layer: smaller tiles in front
+  geom_tile(
+    data = calendar_data,
+    aes(x = Month_num, y = Day, fill = RelRate),
+    width = 0.7, height = 0.7
+  ) +
+  scale_fill_viridis_c(
+    option = "C", name = "Relative rate\n(max = yellow)", limits = c(0, 1),
+    guide = guide_colorbar(
+      title.position = "top",
+      barwidth = 7,   # shorter color bar
+      barheight = 0.4 # shorter color bar
+    )
+  ) +
+  scale_x_continuous(
+    breaks = 1:12,
+    labels = month.abb,
+    expand = c(0, 0)
+  ) +
+  scale_y_reverse(breaks = c(1, 10, 20, 31)) +
+  facet_grid(Group ~ Year, switch = "x") +
+  theme_minimal(base_size = 13) +
+  theme(
+    plot.title = element_text(size = 14, face = "bold", hjust = 0.5),
+    panel.grid = element_blank(),
+    strip.text = element_text(face = "bold"),
+    axis.title = element_blank(),
+    legend.position = "bottom",
+    legend.box = "horizontal",
+    legend.direction = "horizontal",
+    legend.title = element_text(face = "bold", size = 10),
+    legend.text = element_text(size = 8),      # smaller legend text
+    legend.background = element_rect(fill = alpha("white", 0.8), color = NA),
+    legend.margin = margin(0, 2, 0, 2)
+  ) +
+  labs(
+    title = "Calendar Heatmap (Normalized per Group) of COVID-19 Cases per 100,000",
+    subtitle = "Colors are relative to the max within each group (Apr 2020 – Dec 2021)"
+  )
+
+calendar_plot
+```
+
