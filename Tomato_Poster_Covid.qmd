@@ -1,7 +1,10 @@
 ---
 title: "Tomato Project: Covid Visualization"
 author: "Daniel Lip, Pierre Chan, Howard Yeo, Joel Koh, Jolie Yeo, Danish Dol, Sarah Loo"
-format: html
+format: 
+  html:
+    self-contained: false  
+    embed-resources: false
 editor: visual
 ---
 
@@ -885,6 +888,22 @@ create_enhanced_3d_plot <- function(data, map_surface = NULL) {
         "<br>Latitude: ", round(Latitude, 4),
         "<br>Longitude: ", round(Longitude, 4)
     ),
+    showlegend = FALSE
+  )
+  
+  # Identify top 5 clusters
+  top5 <- data %>% top_n(5, wt = Cases)
+  
+  # Add labels above the top 5 clusters
+  p <- p %>% add_trace(
+    data = top5,
+    type = "scatter3d",
+    mode = "text",
+    x = ~Longitude, y = ~Latitude, z = ~Cases + 50,  # offset to appear above bars
+    text = ~paste0(Cluster, "<br>(", Cases, " cases)"),
+    textposition = "top center",
+    textfont = list(color = "black", size = 12),
+    hoverinfo = "none",
     showlegend = FALSE
   )
 
