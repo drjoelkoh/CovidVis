@@ -428,9 +428,9 @@ density_plot <- ggplot(covid_long, aes(x = Date, y = Rate_trans, color = Group))
   annotate("text",
            x = peak_date + 5,
            y = sqrt(peak_rate),
-           label = paste0("Peak: ", round(peak_rate, 1), "\ncases/100k/km²"),
+           label = paste0("Peak: ", round(sqrt(peak_rate), 2), "\n(sqrt cases/100k/km²)"),
            hjust = 0,
-           size = 3.5,
+           size = 2.8,
            color = "steelblue") +
 
   # Phase boundaries and labels
@@ -449,9 +449,9 @@ density_plot <- ggplot(covid_long, aes(x = Date, y = Rate_trans, color = Group))
 
   # Annotations for key periods and causes
   annotate("text",
-           x = as.Date("2020-04-14"),
+           x = as.Date("2020-04-16"),
            y = 3,
-           label = "Dormitory \noutbreak &\nCircuit Breaker \nstarts\n(Circuit Breaker\nmeasures,strict\nquarantine &\nmass testing\nled to rapid\ndecline in\ndormitory\ncases)",
+           label = "Dormitory\noutbreak:\nCases surged\ndue to rapid\nspread in\ncrowded\ndormitories",
            hjust = 0, size = 2.5, color = "darkred") +
   annotate("text",
            x = as.Date("2021-09-01") - 20,
@@ -459,20 +459,30 @@ density_plot <- ggplot(covid_long, aes(x = Date, y = Rate_trans, color = Group))
            label = "Sept 2021\nspike:\nResurgence\nafter easing\nrestrictions,\nbreakthrough\ninfections\namong elderly\n& vulnerable",
            hjust = 0, size = 2.8, color = "darkred") +
   annotate("text",
-           x = as.Date("2020-07-30") - 20,
+           x = as.Date("2020-07-30") - 18,
            y = 8.75, 
            label = "July 2020 spike: Dormitory mass testing\nramp-up \n'Backlog' of asymptomatic cases detected\nas dorms cleared for return to work",
            hjust = 0, size = 3, color = "darkred") +
   annotate("text",
            x = as.Date("2020-08-20") - 8,
            y = 5,
-           label = "Dormitories cleared by Aug 2020:\nMass outbreaks ended; most\nworkers recovered or isolated. Strict\nreturn-to-work protocols and regular\nsurveillance testing causes drop\nin dormitory case rates.",
+           label = "Dormitories cleared by Aug 2020:\nOutbreaks ended; strict\nreturn-to-work protocols and routine\ntesting kept cases low.",
            hjust = 0, size = 2.8, color = "darkgreen") +
   annotate("text",
            x = as.Date("2021-9-27") + 5,
-           y = 8.2,
-           label = "Tighter restrictions:\nGroup sizes cut to 2,\nWFH default,\nschools on HBL,\nreduced dine-in/event\nsizes & strong protection\nfor vulnerable groups\ncauses drop in cases",
+           y = 8.65,
+           label = "Tighter restrictions:\nGroup sizes cut to 2,\nWFH default,\nschools on HBL,\nreduced dine-in/event\nsizes",
            hjust = 0, size = 2.8, color = "darkgreen") +
+  annotate("text",
+           x = as.Date("2021-01-03"),
+           y = 5.1,
+           label = "Phase 3: Gradual reopening;\nlarger group sizes, more events,\nvaccination rollout",
+           hjust = 0, size = 2.5, color = "darkblue") +
+  annotate("text",
+           x = as.Date("2021-05-20"),
+           y = 4.9,
+           label = "Heightened Alert:\nClusters & variants;\ngroup size 2, no\ndine-in,WFH",
+           hjust = 0, size = 2.5, color = "darkblue") +
 
   scale_color_manual(values = c("Dormitories" = "steelblue", "Community" = "firebrick")) +
 
@@ -494,7 +504,7 @@ density_plot <- ggplot(covid_long, aes(x = Date, y = Rate_trans, color = Group))
   labs(
     title = "COVID-19 Case Rates Adjusted for Population Density",
     subtitle = "Cases per 100,000 people per km² (Apr 2020 – Dec 2021)",
-    x = "Date",
+    x = "Covid-19 Pandemic Timeline",
     y = "Density-Adjusted Case Rate\n(Sqrt transform applied to Dormitory cases)",
     color = "Population Group"
   )
