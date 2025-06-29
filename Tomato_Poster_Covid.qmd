@@ -506,9 +506,6 @@ ggsave("covid_density_sqrt_scaled_annotated.png", plot = density_plot,
 
 # Display
 density_plot
-
-
-
 ```
 
 ```{r}
@@ -709,6 +706,7 @@ ggsave("covid_cases_per100k.png", plot = plot_per100k,
 plot_per100k
 
 ```
+
 ```{r}
 library(tidyverse)
 library(lubridate)
@@ -842,3 +840,166 @@ calendar_plot <- ggplot() +
 calendar_plot
 ```
 
+```{r}
+
+#|label: Z-score Normalized Density Plot
+library(tidyverse)
+library(lubridate)
+
+# Prepare long-form data
+covid_long <- covid_clean %>%
+  select(Date, dorm_cases_density_rate, community_cases_density_rate) %>%
+  pivot_longer(cols = -Date, names_to = "Group", values_to = "Rate") %>%
+  mutate(
+    Date = as.Date(Date),
+    Group = recode(Group,
+                   "dorm_cases_density_rate" = "Dormitories",
+                   "community_cases_density_rate" = "Community")
+  ) %>%
+  filter(Date >= as.Date("2020-04-01") & Date <= as.Date("2021-12-31"))
+
+# Z-score normalization per group
+covid_long <- covid_long %>%
+  group_by(Group) %>%
+  mutate(
+    Rate_trans = (Rate - mean(Rate, na.rm = TRUE)) / sd(Rate, na.rm = TRUE)
+  ) %>%
+  ungroup()
+
+# Find dormitory peak (in original scale for annotation reference)
+peak_dorm <- covid_long %>%
+  filter(Group == "Dormitories") %>%
+  filter(Rate == max(Rate, na.rm = TRUE)) %>%
+  slice(1)
+
+peak_date <- peak_dorm$Date
+peak_rate <- peak_dorm$Rate
+
+# Phase rectangle definitions
+phase_rectangles <- tibble(
+  xmin = as.Date(c("2020-04-01", "2020-04-07", "2020-06-01", "2020-06-19", 
+                   "2020-12-28", "2021-05-16", "2021-08-10", "2021-10-01")),
+  xmax = as.Date(c("2020-04-07", "2020-06-01", "2020-06-19", "2020-12-28",
+                   "2021-05-16", "2021-08-10", "2021-10-01", "2021-12-31")),
+  Phase = c("Pre-Circuit Breaker", "Circuit Breaker", "Phase 1", "Phase 2", 
+            "Phase 3", "Heightened Alert", "Preparatory Stage", "Stabilisation/Transition Phase"),
+  fill_color = c("#E8F5E8", "#FFE4E1", "#E6F3FF", "#F0E6FF", 
+                 "#FFF8DC", "#FFE4B5", "#E0FFE0", "#F5F5DC")
+)
+
+phase_dates <- tibble(
+  Date = as.Date(c("2020-04-07", "2020-06-01", "2020-06-19", "2020-12-28",
+                   "2021-05-16", "2021-08-10", "2021-10-01", "2021-12-27")),
+  Phase = c("Circuit Breaker", "Phase 1", "Phase 2", "Phase 3",
+            "Heightened Alert", "Preparatory Stage", "Stabilisation Phase", "Transition Phase")
+)
+
+max_y <- max(covid_long$Rate_trans, na.rm = TRUE)
+label_y <- max_y * 0.6
+
+caption_text <- paste(
+  "Notes:",
+  "1. Apr 2020: Dormitory outbreak, strict quarantine, mass testing → rapid decline.",
+  "2. Jul 2020: Mass testing ramp-up → backlog of asymptomatic cases.",
+  "3. Aug 2020: Dorms cleared, strict protocols → drop in rates.",
+  "4. Sep 2021: Spike from easing, breakthrough infections in vulnerable.",
+  "5. Oct 2021: Restrictions reinstated → fall in cases.",
+  sep = "\n"
+)
+
+
+# Z-score normalized plot with annotations
+z_score_plot <- ggplot(covid_long, aes(x = Date, y = Rate_trans, color = Group)) +
+  
+  geom_rect(data = phase_rectangles, 
+            aes(xmin = xmin, xmax = xmax, ymin = -Inf, ymax = Inf, fill = Phase),
+            inherit.aes = FALSE, alpha = 0.3) +
+  scale_fill_manual(values = setNames(phase_rectangles$fill_color, phase_rectangles$Phase),
+                    name = "Phase", guide = "none") +
+  
+  geom_line(size = 0.8) +
+
+  geom_point(data = peak_dorm, aes(x = Date, y = (Rate - mean(Rate, na.rm = TRUE)) / sd(Rate, na.rm = TRUE)),
+             color = "steelblue", size = 2.5) +
+  annotate("text",
+           x = peak_date + 5,
+           y = (peak_rate - mean(peak_dorm$Rate, na.rm = TRUE)) / sd(peak_dorm$Rate, na.rm = TRUE),
+           label = paste0("Peak: ", round(peak_rate, 1), "\ncases/100k/km²"),
+           hjust = 0,
+           size = 3.5,
+           color = "steelblue") +
+
+  geom_vline(data = phase_dates, aes(xintercept = Date),
+             linetype = "dashed", color = "black", alpha = 0.7) +
+  geom_text(
+    data = phase_dates,
+    aes(x = Date - 6, y = label_y, label = Phase),
+    inherit.aes = FALSE,
+    angle = 90,
+    hjust = 1,
+    vjust = 0.5,
+    size = 3.2,
+    color = "black"
+  ) +
+
+  annotate("text",
+           x = as.Date("2020-04-14"),
+           y = 2.5,
+           label = "Event 1",
+           hjust = 0, size = 2.5, color = "darkred") +
+  annotate("text",
+           x = as.Date("2020-07-30") - 20,
+           y = 4.5, 
+           label = "Event 2",
+           hjust = 0, size = 3, color = "darkred") +
+  annotate("text",
+           x = as.Date("2020-08-20") - 8,
+           y = 2,
+           label = "Event 3",
+           hjust = 0, size = 2.8, color = "darkgreen") +
+  annotate("text",
+           x = as.Date("2021-09-01") - 20,
+           y = 4,
+           label = "Event 4",
+           hjust = 0, size = 2.8, color = "darkred") +
+  annotate("text",
+           x = as.Date("2021-9-27") + 5,
+           y = 4.2,
+           label = "Event 5",
+           hjust = 0, size = 2.8, color = "darkgreen") +
+
+  scale_color_manual(values = c("Dormitories" = "steelblue", "Community" = "firebrick")) +
+
+  scale_x_date(
+    breaks = seq(as.Date("2020-04-01"), as.Date("2021-12-31"), by = "3 months"),
+    date_labels = "%b\n%Y",
+    limits = c(as.Date("2020-04-01"), as.Date("2021-12-31"))
+  ) +
+
+  theme_minimal(base_size = 14) +
+  theme(
+    legend.position = "top",
+    plot.title = element_text(face = "bold", size = 16),
+    plot.subtitle = element_text(size = 13),
+    plot.margin = margin(t = 40, r = 20, b = 20, l = 20),
+    panel.grid.major = element_line(color = alpha("black", 0.1), size = 0.5),
+    panel.grid.minor = element_line(color = alpha("black", 0.05), size = 0.3)
+  ) +
+  labs(
+    title = "Z-Score Normalized COVID-19 Case Rates by Group",
+    subtitle = "Standardized per-group density-adjusted rates (Apr 2020 – Dec 2021)",
+    x = "Date",
+    y = "Z-Score of Case Rate",
+    color = "Population Group",
+    caption = caption_text
+  )
+
+
+ggsave("covid_density_zscore_scaled_annotated.png", plot = z_score_plot,
+       width = 11, height = 6.5, dpi = 300,
+       device = "png", bg = "white")
+
+z_score_plot
+
+
+```
