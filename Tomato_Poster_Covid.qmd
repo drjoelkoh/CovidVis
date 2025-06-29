@@ -912,11 +912,10 @@ caption_text <- paste(
   "1. Apr 2020: Dormitory outbreak, strict quarantine, mass testing → rapid decline.",
   "2. Jul 2020: Mass testing ramp-up → backlog of asymptomatic cases.",
   "3. Aug 2020: Dorms cleared, strict protocols → drop in rates.",
-  "4. Sep 2021: Spike from easing, breakthrough infections in vulnerable.",
+  "4. Sep 2021: Spike from easing restrictions, breakthrough infections in vulnerable.",
   "5. Oct 2021: Restrictions reinstated → fall in cases.",
   sep = "\n"
 )
-
 
 # Z-score normalized plot with annotations
 z_score_plot <- ggplot(covid_long, aes(x = Date, y = Rate_trans, color = Group)) +
@@ -929,15 +928,20 @@ z_score_plot <- ggplot(covid_long, aes(x = Date, y = Rate_trans, color = Group))
   
   geom_line(size = 0.8) +
 
-  geom_point(data = peak_dorm, aes(x = Date, y = (Rate - mean(Rate, na.rm = TRUE)) / sd(Rate, na.rm = TRUE)),
-             color = "steelblue", size = 2.5) +
-  annotate("text",
-           x = peak_date + 5,
-           y = (peak_rate - mean(peak_dorm$Rate, na.rm = TRUE)) / sd(peak_dorm$Rate, na.rm = TRUE),
-           label = paste0("Peak: ", round(peak_rate, 1), "\ncases/100k/km²"),
-           hjust = 0,
-           size = 3.5,
-           color = "steelblue") +
+  geom_point(
+    data = peak_dorm, 
+    aes(x = Date, y = Rate_trans), 
+    color = "steelblue", size = 2.5
+  ) +
+  annotate(
+    "text",
+    x = peak_dorm$Date + 5,
+    y = peak_dorm$Rate_trans,
+    label = paste0("Peak Z-score: ", round(peak_dorm$Rate_trans, 2)),
+    hjust = 0,
+    size = 3.2,
+    color = "steelblue"
+  ) +
 
   geom_vline(data = phase_dates, aes(xintercept = Date),
              linetype = "dashed", color = "black", alpha = 0.7) +
@@ -953,30 +957,30 @@ z_score_plot <- ggplot(covid_long, aes(x = Date, y = Rate_trans, color = Group))
   ) +
 
   annotate("text",
-           x = as.Date("2020-04-14"),
-           y = 2.5,
+           x = as.Date("2020-04-14") + 11,
+           y = 5.3,
            label = "Event 1",
-           hjust = 0, size = 2.5, color = "darkred") +
+           hjust = 0, size = 3, color = "darkgreen") +
   annotate("text",
            x = as.Date("2020-07-30") - 20,
-           y = 4.5, 
+           y = 4.1, 
            label = "Event 2",
            hjust = 0, size = 3, color = "darkred") +
   annotate("text",
            x = as.Date("2020-08-20") - 8,
            y = 2,
            label = "Event 3",
-           hjust = 0, size = 2.8, color = "darkgreen") +
+           hjust = 0, size = 3, color = "darkgreen") +
   annotate("text",
-           x = as.Date("2021-09-01") - 20,
-           y = 4,
+           x = as.Date("2021-09-01") - 10,
+           y = 2,
            label = "Event 4",
-           hjust = 0, size = 2.8, color = "darkred") +
+           hjust = 0, size = 3, color = "darkred") +
   annotate("text",
-           x = as.Date("2021-9-27") + 5,
+           x = as.Date("2021-9-27") + 40,
            y = 4.2,
            label = "Event 5",
-           hjust = 0, size = 2.8, color = "darkgreen") +
+           hjust = 0, size = 3, color = "darkgreen") +
 
   scale_color_manual(values = c("Dormitories" = "steelblue", "Community" = "firebrick")) +
 
@@ -998,7 +1002,7 @@ z_score_plot <- ggplot(covid_long, aes(x = Date, y = Rate_trans, color = Group))
   labs(
     title = "Z-Score Normalized COVID-19 Case Rates by Group",
     subtitle = "Standardized per-group density-adjusted rates (Apr 2020 – Dec 2021)",
-    x = "Date",
+    x = "Covid-19 Pandemic Timeline",
     y = "Z-Score of Case Rate",
     color = "Population Group",
     caption = caption_text
@@ -1010,6 +1014,7 @@ ggsave("covid_density_zscore_scaled_annotated.png", plot = z_score_plot,
        device = "png", bg = "white")
 
 z_score_plot
+
 
 
 ```
