@@ -445,3 +445,475 @@ density_plot
 
 
 ```
+
+```{r}
+# Load libraries
+library(tidyverse)
+library(ggridges)
+library(lubridate)
+
+# Read and clean the data
+df <- read_csv("covid19_sg.csv")
+
+# Select and reshape the data
+df_long <- df %>%
+  select(Date,
+         Dorm = `Local cases residing in dorms MOH report`,
+         Community = `Local cases not residing in doms MOH report`) %>%
+  mutate(Date = ymd(Date)) %>%
+  pivot_longer(cols = c(Dorm, Community), names_to = "Group", values_to = "Cases") %>%
+  drop_na(Cases)
+
+# Add Month as a categorical variable
+df_long <- df_long %>%
+  mutate(Month = month(Date, label = TRUE, abbr = TRUE))
+
+# Plot: overlapping ridgelines by month
+ggplot(df_long, aes(x = Cases, y = fct_rev(Month), color = Group, fill = Group)) +
+  geom_density_ridges(alpha = 0.4, scale = 3, rel_min_height = 0.01) +
+  labs(title = "COVID-19 Cases in Singapore: Community vs Dorms",
+       x = "Number of Cases",
+       y = "Month",
+       fill = "Group",
+       color = "Group") +
+  scale_fill_manual(values = c("Dorm" = "#FF6B6B", "Community" = "#4D96FF")) +
+  scale_color_manual(values = c("Dorm" = "#FF6B6B", "Community" = "#4D96FF")) +
+  theme_minimal()
+
+```
+
+```{r}
+# Install and load required packages
+library(leaflet)
+library(leaflet.extras)
+
+# Prepare your cluster data with coordinates and case counts
+cluster_data <- data.frame(
+  Cluster = c("Westlite Toh Guan", "Yong Thai Hang (Lavender)", "Seletar Aerospace Heights",
+              "Wizlearn Technologies Pte Ltd", "Shaw Lodge", "Cochrane Lodge I",
+              "Sungei Kadut Avenue", "S11 Dormitory", "Cassia @ Penjuru",
+              "North Coast Lodge", "Kranji Lodge I", "Sungei Tengah Lodge",
+              "Tuas View Dormitory", "Acacia Lodge", "Kallang Dormitory",
+              "Woodlands Industrial Park E", "McDonald’s (Example)",
+              "Kenyon/UBS construction site (9 Penang Road)", "Tampines Dormitory",
+              "CitiWall", "Westlite Woodlands dormitory", "Project Glory",
+              "Keppel Shipyard", "NUH renovation site 2", "Kian Teck Crescent dormitory",
+              "Kian Teck Dormitory", "ABC Hostel", "Balestier Road",
+              "Tech Park Crescent dormitory", "PPT Lodge 1", "A18 Cochrane Lodge II",
+              "Toh Guan Dormitory", "Mandai Lodge", "B Senoko Loop", "Kranji Dormitory"),
+  
+  Latitude = c(1.3396, 1.3090, 1.4168, 1.2891, 1.3113, 1.4587,
+               1.4326, 1.4429, 1.3178, 1.4727, 1.4402, 1.4057,
+               1.2829, 1.3401, 1.3115, 1.4452, 1.3371,
+               1.2995, 1.3533, 1.282375, 1.4439, 1.2801,
+               1.264, 1.2933, 1.3288,
+               1.3306, 1.3039, 1.32506,
+               1.3276, 1.4177, 1.46138,
+               1.3400, 1.4116, 1.4637, 1.4402),
+  
+  Longitude = c(103.7431, 103.8610, 103.8828, 103.8443, 103.8488, 103.8183,
+                103.7479, 103.7712, 103.7317, 103.8048, 103.7548, 103.7297,
+                103.6393, 103.7545, 103.8687, 103.7788, 103.7791,
+                103.8436, 103.9557, 103.864273, 103.7847, 103.8496,
+                103.840, 103.7848, 103.6943,
+                103.6912, 103.8587, 103.85054,
+                103.6997, 103.8971, 103.81811,
+                103.7430, 103.7863, 103.8018, 103.7548),
+
+  Cases = c(110, 9, 5, 14, 24, 5331, 31, 797, 15, 18, 20, 279, 43, 5685,
+            536, 127, 5, 15, 61, 6, 10, 49, 22, 610, 4, 3, 7234, 8,
+            19, 1, 46, 83, 721, 20, 9)
+)
+
+# Create the heatmap
+leaflet(cluster_data) %>%
+  addProviderTiles(providers$CartoDB.Positron) %>%
+  addHeatmap(
+    lng = ~Longitude,
+    lat = ~Latitude,
+    intensity = ~Cases,
+    blur = 1,                # Less blur = sharper glow
+    max = max(cluster_data$Cases), # Keeps true scale
+    radius = 10,              # Bigger radius = more area glow
+    minOpacity = 0.4          # Makes low-intensity areas visible
+  )
+```
+
+```{r}
+library(plotly)
+library(dplyr)
+library(png) 
+
+# Your cluster data
+cluster_data <- data.frame(
+  Cluster = c(
+    "Westlite Toh Guan", "Seletar Aerospace Heights", "Wizlearn Technologies Pte Ltd",
+    "Shaw Lodge", "Cochrane Lodge I", "Sungei Kadut Avenue", "S11 Dormitory",
+    "Cassia @ Penjuru", "North Coast Lodge", "Kranji Lodge I", "Sungei Tengah Lodge",
+    "Tuas View Dormitory", "Acacia Lodge", "Kallang Dormitory",
+    "Woodlands Industrial Park E", "Kenyon/UBS construction site (9 Penang Road)",
+    "Tampines Dormitory", "CitiWall", "Westlite Woodlands dormitory", "Project Glory",
+    "Keppel Shipyard", "NUH renovation site 2", "Kian Teck Crescent dormitory",
+    "Kian Teck Dormitory", "ABC Hostel", "Balestier Road", "Tech Park Crescent dormitory",
+    "PPT Lodge 1A", "Cochrane Lodge II", "Toh Guan Dormitory", "Mandai Lodge",
+    "B Senoko Loop", "Kranji Dormitory"
+  ),
+  Cases = c(
+    110, 5, 14, 24, 5331, 31, 797, 15, 18, 20, 279, 43, 5685, 536,
+    127, 15, 61, 6, 10, 49, 22, 610, 4, 3, 7234, 8, 19, 18, 46, 83,
+    721, 20, 9
+  ),
+  Latitude = c(
+    1.336479358252648, 1.405865108244157, 1.30455377557605, 1.3123931576684158,
+    1.45980644632813, 1.4028727458862023, 1.4166802873317088,
+    1.317990063252798, 1.4561262461581825, 1.431649046119088,
+    1.3760170864098327, 1.3138839535281888, 1.3394634394670428,
+    1.3105636318064642, 1.4539726758703109, 1.2981204015689285,
+    1.3671327420712016, 1.335226990236874, 1.4614094228419052,
+    1.2843814379289338, 1.3035148050097214, 1.293712275930711,
+    1.3332887118197039, 1.3292575192376144, 1.3037227535727711,
+    1.3264861535659809, 1.3094899804568734, 1.4196894054884313,
+    1.461247043493767, 1.3383098374070241, 1.4065971113532223,
+    1.4597830860053411, 1.4317777521462383
+  ),
+  Longitude = c(
+    103.75174062577297, 103.86573001267531, 103.79681529986875,
+    103.99766514435049, 103.820089270923, 103.75460492868525,
+    103.89541919879917, 103.73190240862799, 103.78739209852215,
+    103.7598430709199, 103.71880627142167, 103.62573649988938,
+    103.75537536805872, 103.86661337195711, 103.79760132378739,
+    103.84465551129118, 103.92941526872715, 103.90700675633154,
+    103.80957678863217, 103.85011283824487, 103.65495391247237,
+    103.78325522624701, 103.69239212193627, 103.69476187004331,
+    103.8593811971341, 103.84630191556397, 103.63029946555761,
+    103.89632074153567, 103.81837290111845, 103.75317797010463,
+    103.76033024674389, 103.80255495616179, 103.75983234219238
+  )
+)
+
+# Convert to numeric
+cluster_data$Latitude <- as.numeric(cluster_data$Latitude)
+cluster_data$Longitude <- as.numeric(cluster_data$Longitude)
+cluster_data$Cases <- as.numeric(cluster_data$Cases)
+
+# Map bounds
+map_lon_min <- 103.56
+map_lon_max <- 104.11
+map_lat_min <- 1.14
+map_lat_max <- 1.475
+
+# Function to create the map surface
+create_map_surface <- function(image_file, lon_range, lat_range, z_level = 0) {
+  tryCatch({
+    img <- readPNG(image_file)
+    img_height <- dim(img)[1]; img_width <- dim(img)[2]
+    x_seq <- seq(lon_range[1], lon_range[2], length.out = img_width)
+    y_seq <- seq(lat_range[1], lat_range[2], length.out = img_height)
+    z_surface <- matrix(z_level, nrow = img_height, ncol = img_width)
+    if(length(dim(img)) == 3) {
+      img_for_surface <- img[,,1] * 0.8 + img[,,2] * 0.1 + img[,,3] * 0.1
+    } else {
+      img_for_surface <- img
+    }
+    img_for_surface <- img_for_surface[nrow(img_for_surface):1, ]
+    return(list(x=x_seq, y=y_seq, z=z_surface, surfacecolor=img_for_surface))
+  }, error = function(e) { message("Could not read image file: ", e$message); return(NULL) })
+}
+
+create_enhanced_3d_plot <- function(data, map_surface = NULL) {
+  # Add a log-transformed column for both coloring AND height
+  data <- data %>% mutate(LogCases = log1p(Cases))
+  
+  # --- DATA RESTRUCTURING FOR BARS (now using log scale for heights) ---
+  segments_data <- bind_rows(
+    data %>% mutate(z = 0), # Start points (still at 0)
+    data %>% mutate(z = LogCases)  # End points (now log-scaled)
+  ) %>% arrange(Cluster) # Arrange to group start/end points for the 'split' argument
+
+  # Define the range for the color scale based on the log-transformed values
+  min_log_cases <- min(data$LogCases)
+  max_log_cases <- max(data$LogCases)
+  
+  # Create base plot
+  p <- plot_ly()
+  
+  # Add map surface
+  if(!is.null(map_surface)) {
+    p <- p %>% add_surface(
+      x = map_surface$x, y = map_surface$y, z = map_surface$z,
+      surfacecolor = map_surface$surfacecolor,
+      colorscale = list(c(0, "rgb(50,50,50)"), c(1, "rgb(200,200,200)")),
+      opacity = 0.8, showscale = FALSE, hoverinfo = "skip", name = "Singapore Map"
+    )
+  }
+  
+  # --- Add all bars in a single call (now with log-scaled heights) ---
+  p <- p %>% add_trace(
+    data = segments_data,
+    type = "scatter3d",
+    mode = "lines",
+    x = ~Longitude, y = ~Latitude, z = ~z,
+    split = ~Cluster, # This tells plotly to draw separate lines for each cluster
+    line = list(
+        color = ~LogCases, # Color by log-transformed cases
+        colorscale = "Viridis",
+        cmin = min_log_cases,
+        cmax = max_log_cases,
+        width = 10,
+        showscale = FALSE # Hide individual scale, we'll use the marker scale
+    ),
+    hoverinfo = "none", # Hover is handled by the markers
+    showlegend = FALSE
+  )
+  
+  # --- Add all markers in a single call (now at log-scaled heights) ---
+  p <- p %>% add_trace(
+    data = data,
+    type = "scatter3d",
+    mode = "markers",
+    x = ~Longitude, y = ~Latitude, z = ~LogCases, # Now using log-scaled height
+    marker = list(
+        size = 5,
+        color = ~LogCases, # Color by log-transformed cases
+        colorscale = "Viridis",
+        cmin = min_log_cases,
+        cmax = max_log_cases,
+        showscale = TRUE, # Show the main color bar here
+        colorbar = list(
+            title = list(text = "Log(Cases)", font = list(size = 14)),
+            tickvals = log1p(c(0, 10, 50, 100, 500, 2000, 7000)),
+            ticktext = c("0", "10", "50", "100", "500", "2000", "7000"),
+            len = 0.8, thickness = 10, x = 1.02
+        )
+    ),
+    hoverinfo = "text",
+    text = ~paste(
+        "<b>", Cluster, "</b>",
+        "<br>Cases: ", Cases,
+        "<br>Log(Cases): ", round(LogCases, 2),
+        "<br>Latitude: ", round(Latitude, 4),
+        "<br>Longitude: ", round(Longitude, 4)
+    ),
+    showlegend = FALSE
+  )
+
+  # Configure layout with log-scaled z-axis labels
+  p <- p %>% layout(
+    scene = list(
+      xaxis = list(title = "Longitude", range = c(map_lon_min, map_lon_max)),
+      yaxis = list(title = "Latitude", range = c(map_lat_min, map_lat_max)),
+      zaxis = list(
+        title = "Log(Cases)",
+        tickvals = log1p(c(0, 10, 50, 100, 500, 2000, 7000)),
+        ticktext = c("0", "10", "50", "100", "500", "2000", "7000")
+      ),
+      aspectmode = "manual",
+      aspectratio = list(x = 1.780793, y = 1, z = 0.5),
+      camera = list(eye = list(x = 1.5, y = 1.5, z = 1.2))
+    ),
+    title = list(text = "COVID-19 Clusters in Dormitories and Construction Sites in Singapore (Log Scale)", font = list(size = 16)),
+    margin = list(r = 100) # Add right margin for colorbar
+  )
+  
+  return(p)
+}
+
+# Create map surface
+map_surface <- create_map_surface("singapore_map.png", 
+                                  c(map_lon_min, map_lon_max), 
+                                  c(map_lat_min, map_lat_max))
+
+p_final <- create_enhanced_3d_plot(cluster_data, map_surface)
+print("Final 3D plot with log-scaled heights and consistent colors:")
+print(p_final)
+
+
+```
+
+```{r}
+library(plotly)
+library(dplyr)
+library(png) 
+
+# Your cluster data
+cluster_data <- data.frame(
+  Cluster = c(
+    "Westlite Toh Guan", "Seletar Aerospace Heights", "Wizlearn Technologies Pte Ltd",
+    "Shaw Lodge", "Cochrane Lodge I", "Sungei Kadut Avenue", "S11 Dormitory",
+    "Cassia @ Penjuru", "North Coast Lodge", "Kranji Lodge I", "Sungei Tengah Lodge",
+    "Tuas View Dormitory", "Acacia Lodge", "Kallang Dormitory",
+    "Woodlands Industrial Park E", "Kenyon/UBS construction site (9 Penang Road)",
+    "Tampines Dormitory", "CitiWall", "Westlite Woodlands dormitory", "Project Glory",
+    "Keppel Shipyard", "NUH renovation site 2", "Kian Teck Crescent dormitory",
+    "Kian Teck Dormitory", "ABC Hostel", "Balestier Road", "Tech Park Crescent dormitory",
+    "PPT Lodge 1A", "Cochrane Lodge II", "Toh Guan Dormitory", "Mandai Lodge",
+    "B Senoko Loop", "Kranji Dormitory"
+  ),
+  Cases = c(
+    110, 5, 14, 24, 5331, 31, 797, 15, 18, 20, 279, 43, 5685, 536,
+    127, 15, 61, 6, 10, 49, 22, 610, 4, 3, 7234, 8, 19, 18, 46, 83,
+    721, 20, 9
+  ),
+  Latitude = c(
+    1.336479358252648, 1.405865108244157, 1.30455377557605, 1.3123931576684158,
+    1.45980644632813, 1.4028727458862023, 1.4166802873317088,
+    1.317990063252798, 1.4561262461581825, 1.431649046119088,
+    1.3760170864098327, 1.3138839535281888, 1.3394634394670428,
+    1.3105636318064642, 1.4539726758703109, 1.2981204015689285,
+    1.3671327420712016, 1.335226990236874, 1.4614094228419052,
+    1.2843814379289338, 1.3035148050097214, 1.293712275930711,
+    1.3332887118197039, 1.3292575192376144, 1.3037227535727711,
+    1.3264861535659809, 1.3094899804568734, 1.4196894054884313,
+    1.461247043493767, 1.3383098374070241, 1.4065971113532223,
+    1.4597830860053411, 1.4317777521462383
+  ),
+  Longitude = c(
+    103.75174062577297, 103.86573001267531, 103.79681529986875,
+    103.99766514435049, 103.820089270923, 103.75460492868525,
+    103.89541919879917, 103.73190240862799, 103.78739209852215,
+    103.7598430709199, 103.71880627142167, 103.62573649988938,
+    103.75537536805872, 103.86661337195711, 103.79760132378739,
+    103.84465551129118, 103.92941526872715, 103.90700675633154,
+    103.80957678863217, 103.85011283824487, 103.65495391247237,
+    103.78325522624701, 103.69239212193627, 103.69476187004331,
+    103.8593811971341, 103.84630191556397, 103.63029946555761,
+    103.89632074153567, 103.81837290111845, 103.75317797010463,
+    103.76033024674389, 103.80255495616179, 103.75983234219238
+  )
+)
+
+# Convert to numeric
+cluster_data$Latitude <- as.numeric(cluster_data$Latitude)
+cluster_data$Longitude <- as.numeric(cluster_data$Longitude)
+cluster_data$Cases <- as.numeric(cluster_data$Cases)
+
+# Map bounds
+map_lon_min <- 103.56
+map_lon_max <- 104.11
+map_lat_min <- 1.14
+map_lat_max <- 1.475
+
+# Function to create the map surface
+create_map_surface <- function(image_file, lon_range, lat_range, z_level = 0) {
+  tryCatch({
+    img <- readPNG(image_file)
+    img_height <- dim(img)[1]; img_width <- dim(img)[2]
+    x_seq <- seq(lon_range[1], lon_range[2], length.out = img_width)
+    y_seq <- seq(lat_range[1], lat_range[2], length.out = img_height)
+    z_surface <- matrix(z_level, nrow = img_height, ncol = img_width)
+    if(length(dim(img)) == 3) {
+      img_for_surface <- img[,,1] * 0.8 + img[,,2] * 0.1 + img[,,3] * 0.1
+    } else {
+      img_for_surface <- img
+    }
+    img_for_surface <- img_for_surface[nrow(img_for_surface):1, ]
+    return(list(x=x_seq, y=y_seq, z=z_surface, surfacecolor=img_for_surface))
+  }, error = function(e) { message("Could not read image file: ", e$message); return(NULL) })
+}
+
+
+create_enhanced_3d_plot <- function(data, map_surface = NULL) {
+  # Add a log-transformed column for coloring
+  data <- data %>% mutate(LogCases = log1p(Cases))
+  
+  # --- DATA RESTRUCTURING FOR BARS ---
+  segments_data <- bind_rows(
+    data %>% mutate(z = 0), # Start points
+    data %>% mutate(z = Cases)  # End points
+  ) %>% arrange(Cluster) # Arrange to group start/end points for the 'split' argument
+
+  # Define the range for the color scale based on the log-transformed values
+  min_log_cases <- min(data$LogCases)
+  max_log_cases <- max(data$LogCases)
+  
+  # Create base plot
+  p <- plot_ly()
+  
+  # Add map surface
+  if(!is.null(map_surface)) {
+    p <- p %>% add_surface(
+      x = map_surface$x, y = map_surface$y, z = map_surface$z,
+      surfacecolor = map_surface$surfacecolor,
+      colorscale = list(c(0, "rgb(50,50,50)"), c(1, "rgb(200,200,200)")),
+      opacity = 0.8, showscale = FALSE, hoverinfo = "skip", name = "Singapore Map"
+    )
+  }
+  
+  # --- Add all bars in a single call ---
+  p <- p %>% add_trace(
+    data = segments_data,
+    type = "scatter3d",
+    mode = "lines",
+    x = ~Longitude, y = ~Latitude, z = ~z,
+    split = ~Cluster, # This tells plotly to draw separate lines for each cluster
+    line = list(
+        color = ~LogCases, # Color by log-transformed cases
+        colorscale = "Viridis",
+        cmin = min_log_cases,
+        cmax = max_log_cases,
+        width = 10,
+        showscale = FALSE # Hide individual scale, we'll use the marker scale
+    ),
+    hoverinfo = "none", # Hover is handled by the markers
+    showlegend = FALSE
+  )
+  
+  # --- Add all markers in a single call ---
+  p <- p %>% add_trace(
+    data = data,
+    type = "scatter3d",
+    mode = "markers",
+    x = ~Longitude, y = ~Latitude, z = ~Cases,
+    marker = list(
+        size = 8,
+        color = ~LogCases, # Color by log-transformed cases
+        colorscale = "Viridis",
+        cmin = min_log_cases,
+        cmax = max_log_cases,
+        showscale = TRUE, # Show the main color bar here
+        colorbar = list(
+            title = list(text = "Log(Cases)", font = list(size = 14)),
+            tickvals = log1p(c(0, 10, 100, 500, 2000, 7000)),
+            ticktext = c("0", "10", "100", "500", "2000", "7000"),
+            len = 0.8, thickness = 10, x = 1.02
+        )
+    ),
+    hoverinfo = "text",
+    text = ~paste(
+        "<b>", Cluster, "</b>",
+        "<br>Cases: ", Cases,
+        "<br>Latitude: ", round(Latitude, 4),
+        "<br>Longitude: ", round(Longitude, 4)
+    ),
+    showlegend = FALSE
+  )
+
+  # Configure layout
+  p <- p %>% layout(
+    scene = list(
+      xaxis = list(title = "Longitude", range = c(map_lon_min, map_lon_max)),
+      yaxis = list(title = "Latitude", range = c(map_lat_min, map_lat_max)),
+      zaxis = list(title = "Cases"),
+      aspectmode = "manual",
+      aspectratio = list(x = 1.780793, y = 1, z = 0.5),
+      camera = list(eye = list(x = 1.5, y = 1.5, z = 1.2))
+    ),
+    title = list(text = "COVID-19 Clusters in Dormitories and Construction Sites in Singapore", font = list(size = 16)),
+    margin = list(r = 100) # Add right margin for colorbar
+  )
+  
+  return(p)
+}
+
+
+# Create map surface
+map_surface <- create_map_surface("singapore_map.png", 
+                                  c(map_lon_min, map_lon_max), 
+                                  c(map_lat_min, map_lat_max))
+
+
+p_final <- create_enhanced_3d_plot(cluster_data, map_surface)
+print("Final 3D plot with consistent colors:")
+print(p_final)
+
+```
