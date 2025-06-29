@@ -1,17 +1,30 @@
 ---
-title: "Tomato Project: Covid Visualization"
+title: "Tomato Project: Visualizing COVID-19 Inequities"
 author: "Daniel Lip, Pierre Chan, Howard Yeo, Joel Koh, Jolie Yeo, Danish Dol, Sarah Loo"
 format: html
 editor: visual
 ---
 
+# Introduction
+
+The COVID-19 pandemic has underscored stark differences in health outcomes across different population groups and stages of medical care. To better understand these disparities, we present a series of visualizations that explore infection patterns, case severity, and system responses in Singapore between 2020 and 2021. This analysis leverages official MOH data to identify key phases of the pandemic, highlight outbreak spikes in vulnerable populations such as migrant workers, and assess the proportional severity of cases using standardized and log-scaled metrics. These visual tools aim to uncover not just what happened, but also who was affected, and to what extent.
+
+# Load Libraries
+
 ```{r}
+#| label: Load Libraries
+
 # Load necessary libraries
 library(tidyverse)
 library(lubridate)
+library(fmsb)
 ```
 
+# Load Dataset
+
 ```{r}
+#| label: Load Covid 19 Dataset
+
 # Load the dataset
 covid_data <- read_csv("covid19_sg.csv")
 covid_data
@@ -22,7 +35,10 @@ print(paste("Total NA values before cleaning:", as.numeric(total_na_before)))
 
 ```
 
+# Data Cleaning
+
 ```{r}
+#| label: Data cleaning Process
 
 # Clean dataset: replace NA in numeric columns with 0
 covid_data <- covid_data %>%
@@ -47,7 +63,11 @@ print(paste("Total 0 values after cleaning:", as.numeric(total_zeros_after)))
 
 ```
 
+# Density Areas of Dorms and Comms
+
 ```{r}
+#| label: Define density areas for dormitories and communities
+
 # Define 2020 values
 dorm_population_2020      <- 311100
 dorm_land_area_2020       <- 5.0
@@ -80,452 +100,14 @@ covid_clean <- covid_clean %>%
 
 ```
 
-```{r}
-#| label: Time Series Line Chart (Dormitory vs Community)
-library(patchwork)
-library(zoo)
-
-# Filter data for focus period
-covid_focus <- covid_clean %>%
-  filter(Date >= as.Date("2020-04-01") & Date <= as.Date("2020-09-30")) %>%
-  select(Date,
-         Dormitory = `Local cases residing in dorms MOH report`,
-         Community = `Local cases not residing in doms MOH report`) %>%
-  mutate(
-    Dormitory_MA = rollmean(Dormitory, k = 7, fill = NA, align = "right"),
-    Community_MA = rollmean(Community, k = 7, fill = NA, align = "right"),
-    Month = floor_date(Date, "month")
-  )
-
-# Dynamically compute monthly peak rows
-dorm_peaks <- covid_focus %>%
-  group_by(Month) %>%
-  filter(Dormitory == max(Dormitory, na.rm = TRUE)) %>%
-  slice(1) %>%  # Ensure only one row per month
-  ungroup() %>%
-  mutate(Label = paste0(format(Date, "%b %d"), ": ", Dormitory, " cases"),
-         Month = floor_date(Month, "month"))  # Ensure it's 1st of month
-
-
-comm_peaks <- covid_focus %>%
-  group_by(Month) %>%
-  filter(Community == max(Community, na.rm = TRUE)) %>%
-  slice(1) %>%
-  ungroup() %>%
-  mutate(Label = paste0(format(Date, "%b %d"), ": ", Community, " cases"),
-         Month = floor_date(Month, "month"))
-
-# Point of interest (June 25)
-annotate_point <- as.Date("2020-06-25")
-annotate_y <- covid_focus %>% filter(Date == annotate_point) %>% pull(Dormitory_MA)
-
-# Plot 1: Dormitory Cases
-p1 <- ggplot(covid_focus, aes(x = Date)) +
-  geom_line(
-    aes(y = Dormitory, color = "Daily Cases"),
-    alpha = 0.4) +
-  geom_line(
-    aes(y = Dormitory_MA, color = "Weekly Trend"),
-    size = 1) +
-  geom_vline(
-    xintercept = as.Date("2020-04-07"),
-    linetype = "dashed",
-    color = "black") +
-  geom_vline(
-    xintercept = as.Date("2020-06-01"),
-    linetype = "dashed",
-    color = "black") +
-  geom_text(
-    data = dorm_peaks,
-    aes(x = Month, y = -20, label = Label),
-    inherit.aes = FALSE, 
-    vjust = -0.8, size = 3, color = "navy") +
-  geom_point(
-    aes(x = annotate_point, y = annotate_y), 
-    color = "navy", size = 2.5) + 
-   geom_segment(
-     aes(x = annotate_point, y = annotate_y, xend = annotate_point + 15, yend = annotate_y + 300),
-     arrow = arrow(length = unit(0.15, "cm")),
-     color = "navy", linetype = "dotted") +
-  annotate("text", 
-            x = as.Date("2020-04-10"), 
-            y = max(covid_focus$Dormitory, na.rm = TRUE),
-            label = "Start of Circuit Breaker",
-            hjust = 0, vjust = -1.2, size = 3) +
-  annotate("text",
-           x = as.Date("2020-06-04"),
-           y = max(covid_focus$Dormitory, na.rm = TRUE),
-           label = "End of Circuit Breaker",
-           hjust = 0, vjust = -1.2, size = 3) +
-  annotate("text",
-           x = annotate_point + 16,
-           y = annotate_y + 300,
-           label = "Aggressive testing & dorm clearance\n(MOH press release 25 Jun)",
-           hjust = 0, size = 3, color = "navy") +
-  scale_x_date(
-    breaks = seq(as.Date("2020-04-01"), as.Date("2020-09-30"), by = "1 month"),
-    date_labels = "%b",
-    limits = c(as.Date("2020-04-01"), as.Date("2020-09-30"))
-  ) +
-  scale_color_manual(
-    values = c("Daily Cases" = "steelblue", "Weekly Trend" = "navy")) +
-  labs(
-    title = "COVID-19 Cases in Migrant Worker Dormitories",
-    subtitle = "Daily confirmed cases and weekly trend (Apr–Sep 2020)",
-    caption = "- Weekly trend is a 7-day moving average used to smooth daily fluctuations.\n- Labeled dates indicate the highest number of cases recorded each month.",
-    y = "Dormitory Cases", x = NULL, color = NULL) +
-  theme_minimal() +
-  theme(legend.position = "top")
-
-
-# April spike annotation for Dormitory cases
-combined_apr <- as.Date("2020-04-20")
-combined_apr_y <- covid_focus %>% filter(Date == combined_apr) %>% pull(Dormitory_MA)
-
-p1 <- p1 +
-  geom_point(aes(x = combined_apr, y = combined_apr_y), color = "navy", size = 2.5) +
-  geom_segment(aes(x = combined_apr, y = combined_apr_y,
-                   xend = combined_apr + 17, yend = combined_apr_y + 350), arrow = arrow(length = unit(0.15, "cm")), color = "navy", linetype = "dotted") +
-  annotate("text",
-           x = combined_apr + 18,
-           y = combined_apr_y + 350,
-           label = "Record spike driven by ramped-up\ndormitory testing (Apr 20–28, MOH)",
-           hjust = 0, size = 3, color = "navy")
-
-
-
-
-# Plot 2: Community Cases
-p2 <- ggplot(covid_focus, aes(x = Date)) +
-  geom_line(aes(y = Community, color = "Daily Cases"), alpha = 0.4) +
-  geom_line(aes(y = Community_MA, color = "Weekly Trend"), size = 1) +
-  geom_vline(xintercept = as.Date("2020-04-07"), linetype = "dashed", color = "black") +
-  geom_vline(xintercept = as.Date("2020-06-01"), linetype = "dashed", color = "black") +
-  geom_text(data = comm_peaks, aes(x = Month, y = -20, label = Label),
-          inherit.aes = FALSE, vjust = -0.8, size = 3, color = "firebrick") +
-  annotate("text", x = as.Date("2020-04-10"), y = max(covid_focus$Community, na.rm = TRUE),
-           label = "Start of Circuit Breaker", hjust = 0, vjust = -1.2, size = 3) +
-  annotate("text", x = as.Date("2020-06-04"), y = max(covid_focus$Community, na.rm = TRUE),
-           label = "End of Circuit Breaker", hjust = 0, vjust = -1.2, size = 3) +
-  scale_x_date(
-    breaks = seq(as.Date("2020-04-01"), as.Date("2020-09-30"), by = "1 month"),
-    date_labels = "%b",
-    limits = c(as.Date("2020-04-01"), as.Date("2020-09-30"))
-  ) +
-  scale_color_manual(values = c("Daily Cases" = "darkred", "Weekly Trend" = "firebrick")) +
-  labs(
-    title = "COVID-19 Cases in the Community",
-    subtitle = "Daily confirmed cases and weekly trend (Apr–Sep 2020)",
-    caption = "- Weekly trend is a 7-day moving average used to smooth daily fluctuations.\n- Labeled dates indicate the highest number of cases recorded each month.",
-    y = "Community Cases", x = "Date", color = NULL
-  ) +
-  theme_minimal() +
-  theme(legend.position = "top")
-
-# Save each plot separately
-ggsave("covid_dormitory_plot.png", p1, width = 12, height = 6)
-ggsave("covid_community_plot.png", p2, width = 12, height = 6)
-
-# Optionally display each one in sequence
-p1
-p2
-
-
-
-
-
-
-```
+# Severity Radar Chart
 
 ```{r}
-#| label: Monthly cases bar plot (Dormitory vs Community)
-library(scales)
-
-# Prepare monthly summary
-monthly_cases <- covid_clean %>%
-  filter(Date >= as.Date("2020-04-20") & Date <= as.Date("2020-09-07")) %>%
-  mutate(Month = floor_date(Date, "month")) %>%
-  group_by(Month) %>%
-  summarise(
-    Dormitory = sum(`Local cases residing in dorms MOH report`, na.rm = TRUE),
-    Community = sum(`Local cases not residing in doms MOH report`, na.rm = TRUE)
-  ) %>%
-  pivot_longer(cols = c(Dormitory, Community), names_to = "Group", values_to = "Cases") %>%
-  mutate(Month = factor(format(Month, "%b %Y"), levels = format(seq.Date(as.Date("2020-04-01"), as.Date("2020-09-01"), by = "month"), "%b %Y")))
-
-# Plot
-monthly_bar <- ggplot(monthly_cases, aes(x = Month, y = Cases, fill = Group)) +
-  geom_col(position = position_dodge(width = 0.9)) +
-  geom_text(
-    aes(label = comma(Cases)),
-    position = position_dodge(width = 0.9),
-    vjust = -0.3,
-    size = 3.5
-  ) +
-  scale_fill_manual(values = c("Dormitory" = "steelblue", "Community" = "darkred")) +
-  labs(
-    title = "Monthly COVID-19 Cases by Group",
-    subtitle = "Summarised total cases in dormitories vs community (Apr–Sep 2020)",
-    x = "Month", y = "Total Cases", fill = "Case Group"
-  ) +
-  theme_minimal() +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1))
-
-# Save and view
-ggsave("monthly_covid_cases_grouped.png", monthly_bar, width = 10, height = 6)
-monthly_bar
-
-```
-
-```{r}
-
-library(tidyverse)
-library(lubridate)
-library(scales)
-
-# 1) Load & filter Apr–Sep 2020
-df <- read_csv("covid19_sg.csv", col_types = cols(
-  Date = col_date(),
-  `Local cases residing in dorms MOH report`    = col_double(),
-  `Local cases not residing in doms MOH report` = col_double(),
-  Phase = col_character()
-)) %>%
-  filter(Date >= ymd("2020-04-01"), Date <= ymd("2020-09-30")) %>%
-  mutate(
-    dorm  = `Local cases residing in dorms MOH report`,
-    comm  = `Local cases not residing in doms MOH report`,
-    Month = floor_date(Date, "month")
-  )
-
-# 2) Summarise + build labels
-monthly <- df %>%
-  group_by(Month) %>%
-  summarise(
-    dorm  = sum(dorm, na.rm = TRUE),
-    comm  = sum(comm, na.rm = TRUE),
-    Phase = Phase %>% table() %>% which.max() %>% names()
-  ) %>%
-  ungroup() %>%
-  mutate(
-    label = paste0(format(Month, "%b %Y"), "\n(", Phase, ")")
-  )
-
-# 3) Pivot longer for ggplot
-monthly_long <- monthly %>%
-  select(label, dorm, comm) %>%
-  pivot_longer(c(dorm, comm),
-               names_to  = "Type",
-               values_to = "Count") %>%
-  mutate(
-    Type = recode(Type,
-                  dorm = "Dormitory cases",
-                  comm = "Community cases"),
-    label = factor(label, levels = monthly$label)  # preserve order
-  )
-
-# 4) Plot
-month_phase_plot <- ggplot(monthly_long, aes(x = label, y = Count, fill = Type)) +
-  geom_col(position = position_dodge(width = 0.7),
-           width    = 0.6,
-           color    = "grey20") +
-  geom_text(aes(label = comma(Count)),
-            position = position_dodge(width = 0.7),
-            vjust    = -0.5,
-            size     = 3) +
-  scale_fill_manual(
-    values = c("Community cases" = "#ff7f0e",
-               "Dormitory cases" = "#1f77b4")
-  ) +
-  scale_y_continuous(
-    expand = expansion(mult = c(0, 0.05))
-  ) +
-  theme_light(base_size = 12) +
-  theme(
-    axis.text.x       = element_text(angle = 45, hjust = 1),
-    panel.grid.major.x = element_blank(),
-    panel.grid.minor   = element_blank(),
-    legend.position    = "top",
-    legend.title       = element_blank(),
-    plot.title         = element_text(face = "bold", hjust = 0.5, size = 14)
-  ) +
-  labs(
-    x     = "Month (Phase)",
-    y     = "Total Cases",
-    title = "COVID-19 Cases Apr–Sep 2020 by Month & Phase"
-  )
-
-ggsave("covid_cases_by_month_phase.png", plot = month_phase_plot,
-       width = 10, height = 6, dpi = 300,
-       device = "png", bg = "white")
-
-month_phase_plot
-```
-
-```{r}
-#|label: Population density based
-library(tidyverse)
-library(lubridate)
-
-# Prepare long-form data
-covid_long <- covid_clean %>%
-  select(Date, dorm_cases_density_rate, community_cases_density_rate) %>%
-  pivot_longer(cols = -Date, names_to = "Group", values_to = "Rate") %>%
-  mutate(
-    Date = as.Date(Date),
-    Group = recode(Group,
-                   "dorm_cases_density_rate" = "Dormitories",
-                   "community_cases_density_rate" = "Community")
-  ) %>%
-  filter(Date >= as.Date("2020-04-01") & Date <= as.Date("2021-12-31")) %>%
-  mutate(
-    Rate_trans = sqrt(Rate)
-  )
-
-# Find dormitory peak
-peak_dorm <- covid_long %>%
-  filter(Group == "Dormitories") %>%
-  filter(Rate == max(Rate, na.rm = TRUE)) %>%
-  slice(1)
-
-peak_date <- peak_dorm$Date
-peak_rate <- peak_dorm$Rate
-
-# Define phase rectangles for background
-phase_rectangles <- tibble(
-  xmin = as.Date(c("2020-04-01", "2020-04-07", "2020-06-01", "2020-06-19", 
-                   "2020-12-28", "2021-05-16", "2021-08-10", "2021-10-01")),
-  xmax = as.Date(c("2020-04-07", "2020-06-01", "2020-06-19", "2020-12-28",
-                   "2021-05-16", "2021-08-10", "2021-10-01", "2021-12-31")),
-  Phase = c("Pre-Circuit Breaker", "Circuit Breaker", "Phase 1", "Phase 2", 
-            "Phase 3", "Heightened Alert", "Preparatory Stage", "Stabilisation/Transition Phase"),
-  fill_color = c("#E8F5E8", "#FFE4E1", "#E6F3FF", "#F0E6FF", 
-                 "#FFF8DC", "#FFE4B5", "#E0FFE0", "#F5F5DC")
-)
-
-# Define phase dates and labels
-phase_dates <- tibble(
-  Date = as.Date(c("2020-04-07", "2020-06-01", "2020-06-19", "2020-12-28",
-                   "2021-05-16", "2021-08-10", "2021-10-01", "2021-12-27")),
-  Phase = c("Circuit Breaker", "Phase 1", "Phase 2", "Phase 3",
-            "Heightened Alert", "Preparatory Stage", "Stabilisation Phase", "Transition Phase")
-)
-
-max_y <- max(covid_long$Rate_trans, na.rm = TRUE)
-label_y <- max_y * 0.6
-
-# Plot with annotations for spikes/drops
-density_plot <- ggplot(covid_long, aes(x = Date, y = Rate_trans, color = Group)) +
-  
-  geom_rect(data = phase_rectangles, 
-            aes(xmin = xmin, xmax = xmax, ymin = -Inf, ymax = Inf, fill = Phase),
-            inherit.aes = FALSE, alpha = 0.3) +
-  scale_fill_manual(values = setNames(phase_rectangles$fill_color, phase_rectangles$Phase),
-                    name = "Phase", guide = "none") +
-  
-  geom_line(size = 0.8) +
-  
-  geom_point(data = peak_dorm, aes(x = Date, y = sqrt(Rate)), color = "steelblue", size = 2.5) +
-  annotate("text",
-           x = peak_date + 5,
-           y = sqrt(peak_rate),
-           label = paste0("Peak: ", round(sqrt(peak_rate), 2), "\n(sqrt cases/100k/km²)"),
-           hjust = 0,
-           size = 2.8,
-           color = "steelblue") +
-
-  # Phase boundaries and labels
-  geom_vline(data = phase_dates, aes(xintercept = Date),
-             linetype = "dashed", color = "black", alpha = 0.7) +
-  geom_text(
-    data = phase_dates,
-    aes(x = Date - 6, y = label_y, label = Phase),
-    inherit.aes = FALSE,
-    angle = 90,
-    hjust = 1,
-    vjust = 0.5,
-    size = 3.2,
-    color = "black"
-  ) +
-
-  # Annotations for key periods and causes
-  annotate("text",
-           x = as.Date("2020-04-16"),
-           y = 3,
-           label = "Dormitory\noutbreak:\nCases surged\ndue to rapid\nspread in\ncrowded\ndormitories",
-           hjust = 0, size = 2.5, color = "darkred") +
-  annotate("text",
-           x = as.Date("2021-09-01") - 20,
-           y = 8,
-           label = "Sept 2021\nspike:\nResurgence\nafter easing\nrestrictions,\nbreakthrough\ninfections\namong elderly\n& vulnerable",
-           hjust = 0, size = 2.8, color = "darkred") +
-  annotate("text",
-           x = as.Date("2020-07-30") - 18,
-           y = 8.75, 
-           label = "July 2020 spike: Dormitory mass testing\nramp-up \n'Backlog' of asymptomatic cases detected\nas dorms cleared for return to work",
-           hjust = 0, size = 3, color = "darkred") +
-  annotate("text",
-           x = as.Date("2020-08-20") - 8,
-           y = 5,
-           label = "Dormitories cleared by Aug 2020:\nOutbreaks ended; strict\nreturn-to-work protocols and routine\ntesting kept cases low.",
-           hjust = 0, size = 2.8, color = "darkgreen") +
-  annotate("text",
-           x = as.Date("2021-9-27") + 5,
-           y = 8.65,
-           label = "Tighter restrictions:\nGroup sizes cut to 2,\nWFH default,\nschools on HBL,\nreduced dine-in/event\nsizes",
-           hjust = 0, size = 2.8, color = "darkgreen") +
-  annotate("text",
-           x = as.Date("2021-01-03"),
-           y = 5.1,
-           label = "Phase 3: Gradual reopening;\nlarger group sizes, more events,\nvaccination rollout",
-           hjust = 0, size = 2.5, color = "darkblue") +
-  annotate("text",
-           x = as.Date("2021-05-20"),
-           y = 4.9,
-           label = "Heightened Alert:\nClusters & variants;\ngroup size 2, no\ndine-in,WFH",
-           hjust = 0, size = 2.5, color = "darkblue") +
-
-  scale_color_manual(values = c("Dormitories" = "steelblue", "Community" = "firebrick")) +
-
-  scale_x_date(
-    breaks = seq(as.Date("2020-04-01"), as.Date("2021-12-31"), by = "3 months"),
-    date_labels = "%b\n%Y",
-    limits = c(as.Date("2020-04-01"), as.Date("2021-12-31"))
-  ) +
-
-  theme_minimal(base_size = 14) +
-  theme(
-    legend.position = "top",
-    plot.title = element_text(face = "bold", size = 16),
-    plot.subtitle = element_text(size = 13),
-    plot.margin = margin(t = 40, r = 20, b = 20, l = 20),
-    panel.grid.major = element_line(color = alpha("black", 0.1), size = 0.5),
-    panel.grid.minor = element_line(color = alpha("black", 0.05), size = 0.3)
-  ) +
-  labs(
-    title = "COVID-19 Case Rates Adjusted for Population Density",
-    subtitle = "Cases per 100,000 people per km² (Apr 2020 – Dec 2021)",
-    x = "Covid-19 Pandemic Timeline",
-    y = "Density-Adjusted Case Rate\n(Sqrt transform applied to Dormitory cases)",
-    color = "Population Group"
-  )
-
-# Save the plot
-ggsave("covid_density_sqrt_scaled_annotated.png", plot = density_plot,
-       width = 11, height = 6.5, dpi = 300,
-       device = "png", bg = "white")
-
-# Display
-density_plot
-```
-
-```{r}
-#| label: Severity Radar chart (Deaths, ICU, Hospitalised rates)
-
-png("covid_severity_radar.png", width = 1200, height = 800, res = 150)
-
-library(tidyverse)
-library(fmsb)
-library(lubridate)
+#| label: Display Severity Radar chart (Deaths, ICU, Hospitalised rates)
+#| fig-width: 10
+#| fig-height: 5.5
+#| dpi: 300
+#| echo: false
 
 # Summarise total counts
 covid_severity_summary <- covid_clean %>%
@@ -559,7 +141,7 @@ radar_data <- as.data.frame(radar_data)
 colnames(radar_data) <- c("", "", "")
 rownames(radar_data) <- c("Max", "Min", "Severity")
 
-# Radar chart
+# Plot to screen
 radarchart(
   radar_data,
   axistype = 1,
@@ -591,7 +173,7 @@ for (i in 1:3) {
   text(x, y, labels = label_texts[i], cex = 0.9, font = 2)
 }
 
-# === Legends ===
+# Add legends
 legend("topright",
        legend = c("Proportional Severity"),
        col = "darkred", lty = 1, lwd = 2, bty = "n")
@@ -600,261 +182,29 @@ legend("bottomleft",
        legend = c("0 = Lowest log-scaled severity", "100 = Highest log-scaled severity"),
        text.col = "grey20", bty = "n", cex = 0.8)
 
-dev.off()
-
-
-```
-
-```{r}
-#| label: Population Based Chart
-
-library(tidyverse)
-library(lubridate)
-
-# Define population sizes
-pop_dorm <- 300000
-pop_comm <- 5700000
-
-# Create long-form data with per 100k transformation
-covid_long <- covid_clean %>%
-  transmute(
-    Date = as.Date(Date),
-    Dormitories = `Local cases residing in dorms MOH report` / pop_dorm * 1e5,
-    Community = `Local cases not residing in doms MOH report` / pop_comm * 1e5
-  ) %>%
-  pivot_longer(cols = c("Dormitories", "Community"), names_to = "Group", values_to = "Rate") %>%
-  filter(Date >= as.Date("2020-04-01") & Date <= as.Date("2021-12-31"))
-
-# Find dormitory peak
-peak_dorm <- covid_long %>%
-  filter(Group == "Dormitories") %>%
-  filter(Rate == max(Rate, na.rm = TRUE)) %>%
-  slice(1)
-
-peak_date <- peak_dorm$Date
-peak_rate <- peak_dorm$Rate
-
-# Define background phase rectangles
-phase_rectangles <- tibble(
-  xmin = as.Date(c("2020-04-01", "2020-04-07", "2020-06-01", "2020-06-19", 
-                   "2020-12-28", "2021-05-16", "2021-08-10", "2021-10-01")),
-  xmax = as.Date(c("2020-04-07", "2020-06-01", "2020-06-19", "2020-12-28",
-                   "2021-05-16", "2021-08-10", "2021-10-01", "2021-12-31")),
-  Phase = c("Pre-Circuit Breaker", "Circuit Breaker", "Phase 1", "Phase 2", 
-            "Phase 3", "Heightened Alert", "Preparatory Stage", "Stabilisation/Transition Phase"),
-  fill_color = c("#E8F5E8", "#FFE4E1", "#E6F3FF", "#F0E6FF", 
-                 "#FFF8DC", "#FFE4B5", "#E0FFE0", "#F5F5DC")
-)
-
-phase_dates <- tibble(
-  Date = as.Date(c("2020-04-07", "2020-06-01", "2020-06-19", "2020-12-28",
-                   "2021-05-16", "2021-08-10", "2021-10-01", "2021-12-27")),
-  Phase = c("Circuit Breaker", "Phase 1", "Phase 2", "Phase 3",
-            "Heightened Alert", "Preparatory Stage", "Stabilisation Phase", "Transition Phase")
-)
-
-max_y <- max(covid_long$Rate, na.rm = TRUE)
-label_y <- max_y * 0.6
-
-# Plot
-plot_per100k <- ggplot(covid_long, aes(x = Date, y = Rate, color = Group)) +
-  geom_rect(data = phase_rectangles, 
-            aes(xmin = xmin, xmax = xmax, ymin = -Inf, ymax = Inf, fill = Phase),
-            inherit.aes = FALSE, alpha = 0.3) +
-  scale_fill_manual(values = setNames(phase_rectangles$fill_color, phase_rectangles$Phase),
-                    name = "Phase", guide = "none") +
-  geom_line(size = 0.8) +
-  geom_point(data = peak_dorm, aes(x = Date, y = Rate), color = "steelblue", size = 2.5) +
-  annotate("text",
-           x = peak_date + 5,
-           y = peak_rate,
-           label = paste0("Peak: ", round(peak_rate, 1), "\ncases/100k"),
-           hjust = 0,
-           size = 3.5,
-           color = "steelblue") +
-  geom_vline(data = phase_dates, aes(xintercept = Date),
-             linetype = "dashed", color = "black", alpha = 0.7) +
-  geom_text(
-    data = phase_dates,
-    aes(x = Date - 6, y = label_y, label = Phase),
-    inherit.aes = FALSE,
-    angle = 90,
-    hjust = 1,
-    vjust = 0.5,
-    size = 3.2,
-    color = "black"
-  ) +
-  scale_color_manual(values = c("Dormitories" = "steelblue", "Community" = "firebrick")) +
-  scale_x_date(
-    breaks = seq(as.Date("2020-04-01"), as.Date("2021-12-31"), by = "3 months"),
-    date_labels = "%b\n%Y",
-    limits = c(as.Date("2020-04-01"), as.Date("2021-12-31"))
-  ) +
-  theme_minimal(base_size = 14) +
-  theme(
-    legend.position = "top",
-    plot.title = element_text(face = "bold", size = 16),
-    plot.subtitle = element_text(size = 13),
-    plot.margin = margin(t = 40, r = 20, b = 20, l = 20),
-    panel.grid.major = element_line(color = alpha("black", 0.1), size = 0.5),
-    panel.grid.minor = element_line(color = alpha("black", 0.05), size = 0.3)
-  ) +
-  labs(
-    title = "COVID-19 Case Rates Adjusted per 100,000 People",
-    subtitle = "Cases per 100,000 people (Apr 2020 – Dec 2021)",
-    x = "Date",
-    y = "Case Rate per 100,000",
-    color = "Population Group"
-  )
-
-# Save the plot
-ggsave("covid_cases_per100k.png", plot = plot_per100k,
-       width = 11, height = 6.5, dpi = 300,
-       device = "png", bg = "white")
-
-# Display
-plot_per100k
+# Save as image
+invisible(dev.copy(png, "covid_severity_radar.png", width = 1500, height = 800, res = 150))
+invisible(dev.off())
 
 ```
 
-```{r}
-library(tidyverse)
-library(lubridate)
-library(ggnewscale)
+::: notes
+**Notes on Severity Metrics (Apr–Sep 2020):**\
+1. **Hospitalisations** were the most frequent severe outcome, totaling 88,869 — influenced by policies requiring all positive cases to be admitted.\
+2. **ICU admissions** (1,328) were significantly fewer, reflecting effective triage, younger patient profile, and adequate healthcare capacity.\
+3. **Deaths** (24) remained exceptionally low during this period, likely due to robust containment within vulnerable groups and strong healthcare response.\
+4. Severity values are log-scaled and normalized to emphasize proportional differences across outcome types.
+:::
 
-# 1. Population sizes
-pop_dorm <- 300000
-pop_comm <- 5700000
-
-# 2. Full calendar (all dates, all groups)
-calendar_grid <- expand_grid(
-  Date = seq(as.Date("2020-04-01"), as.Date("2021-12-31"), by = "day"),
-  Group = c("Dormitories", "Community")
-) %>%
-  mutate(
-    Year = year(Date),
-    Month_num = month(Date),
-    Month = month(Date, label = TRUE, abbr = TRUE),
-    Day = day(Date)
-  )
-
-# 3. Cases per 100k, merged into calendar grid
-case_data <- covid_clean %>%
-  transmute(
-    Date = as.Date(Date),
-    Dormitories = `Local cases residing in dorms MOH report` / pop_dorm * 1e5,
-    Community = `Local cases not residing in doms MOH report` / pop_comm * 1e5
-  ) %>%
-  pivot_longer(cols = c("Dormitories", "Community"), 
-               names_to = "Group", values_to = "Rate")
-
-calendar_data <- calendar_grid %>%
-  left_join(case_data, by = c("Date", "Group")) %>%
-  mutate(Rate = replace_na(Rate, 0))
-
-# 4. Normalize Rate within each group and filter for Apr-Dec 2020, Jan-Dec 2021
-calendar_data <- calendar_data %>%
-  group_by(Group) %>%
-  mutate(RelRate = Rate / max(Rate, na.rm = TRUE)) %>%
-  ungroup() %>%
-  filter((Year == 2020 & Month_num >= 4) | (Year == 2021 & Month_num >= 1))
-
-# 5. Phase information
-phase_rects <- tibble(
-  xmin = as.Date(c("2020-04-01", "2020-04-07", "2020-06-01", "2020-06-19", 
-                   "2020-12-28", "2021-05-16", "2021-08-10", "2021-10-01")),
-  xmax = as.Date(c("2020-04-07", "2020-06-01", "2020-06-19", "2020-12-28",
-                   "2021-05-16", "2021-08-10", "2021-10-01", "2021-12-31")),
-  Phase = c("Pre-Circuit Breaker", "Circuit Breaker", "Phase 1", "Phase 2", 
-            "Phase 3", "Heightened Alert", "Preparatory Stage", "Stabilisation/Transition Phase"),
-  fill_color = c(
-    "#808080", "#e6194B", "#4363d8", "#3cb44b", 
-    "#ffe119", "#f58231", "#911eb4", "#42d4f4")
-)
-
-# 6. Expand each phase to all dates covered by that phase
-phase_days <- phase_rects %>%
-  rowwise() %>%
-  mutate(Date = list(seq(xmin, xmax, by = "day"))) %>%
-  unnest(Date) %>%
-  select(Date, Phase, fill_color) %>%
-  filter(Date >= as.Date("2020-04-01") & Date <= as.Date("2021-12-31")) %>%
-  expand_grid(Group = c("Dormitories", "Community")) %>%
-  mutate(
-    Year = year(Date),
-    Month_num = month(Date),
-    Day = day(Date)
-  ) %>%
-  filter((Year == 2020 & Month_num >= 4) | (Year == 2021 & Month_num >= 1))
-
-# 7. Plot
-calendar_plot <- ggplot() +
-  # Phase background per day, per group, per year (full cell)
-  geom_raster(
-    data = phase_days,
-    aes(x = Month_num, y = Day, fill = Phase),
-    alpha = 0.2
-  ) +
-  scale_fill_manual(
-    values = setNames(phase_rects$fill_color, phase_rects$Phase),
-    guide = guide_legend(
-      title = "Phase",
-      nrow = 2,        # 2 rows to save space
-      keywidth = 1,    # smaller color boxes
-      keyheight = 0.5, # smaller color boxes
-      title.position = "top"
-    ),
-    na.value = NA
-  ) +
-  ggnewscale::new_scale_fill() +
-  # Data layer: smaller tiles in front
-  geom_tile(
-    data = calendar_data,
-    aes(x = Month_num, y = Day, fill = RelRate),
-    width = 0.7, height = 0.7
-  ) +
-  scale_fill_viridis_c(
-    option = "C", name = "Relative rate\n(max = yellow)", limits = c(0, 1),
-    guide = guide_colorbar(
-      title.position = "top",
-      barwidth = 7,   # shorter color bar
-      barheight = 0.4 # shorter color bar
-    )
-  ) +
-  scale_x_continuous(
-    breaks = 1:12,
-    labels = month.abb,
-    expand = c(0, 0)
-  ) +
-  scale_y_reverse(breaks = c(1, 10, 20, 31)) +
-  facet_grid(Group ~ Year, switch = "x") +
-  theme_minimal(base_size = 13) +
-  theme(
-    plot.title = element_text(size = 14, face = "bold", hjust = 0.5),
-    panel.grid = element_blank(),
-    strip.text = element_text(face = "bold"),
-    axis.title = element_blank(),
-    legend.position = "bottom",
-    legend.box = "horizontal",
-    legend.direction = "horizontal",
-    legend.title = element_text(face = "bold", size = 10),
-    legend.text = element_text(size = 8),      # smaller legend text
-    legend.background = element_rect(fill = alpha("white", 0.8), color = NA),
-    legend.margin = margin(0, 2, 0, 2)
-  ) +
-  labs(
-    title = "Calendar Heatmap (Normalized per Group) of COVID-19 Cases per 100,000",
-    subtitle = "Colors are relative to the max within each group (Apr 2020 – Dec 2021)"
-  )
-
-calendar_plot
-```
+# Density Based Plot (Z-score)
 
 ```{r}
-
-#|label: Z-score Normalized Density Plot
-library(tidyverse)
-library(lubridate)
+#| label: Display Z-score Normalized Density Plot
+#| fig-width: 11
+#| fig-height: 6
+#| dpi: 300
+#| fig-align: "center"
+#| echo: false
 
 # Prepare long-form data
 covid_long <- covid_clean %>%
@@ -906,16 +256,6 @@ phase_dates <- tibble(
 
 max_y <- max(covid_long$Rate_trans, na.rm = TRUE)
 label_y <- max_y * 0.6
-
-caption_text <- paste(
-  "Notes:",
-  "1. Apr 2020: Dormitory outbreak, strict quarantine, mass testing → rapid decline.",
-  "2. Jul 2020: Mass testing ramp-up → backlog of asymptomatic cases.",
-  "3. Aug 2020: Dorms cleared, strict protocols → drop in rates.",
-  "4. Sep 2021: Spike from easing restrictions, breakthrough infections in vulnerable.",
-  "5. Oct 2021: Restrictions reinstated → fall in cases.",
-  sep = "\n"
-)
 
 # Z-score normalized plot with annotations
 z_score_plot <- ggplot(covid_long, aes(x = Date, y = Rate_trans, color = Group)) +
@@ -1004,17 +344,51 @@ z_score_plot <- ggplot(covid_long, aes(x = Date, y = Rate_trans, color = Group))
     subtitle = "Standardized per-group density-adjusted rates (Apr 2020 – Dec 2021)",
     x = "Covid-19 Pandemic Timeline",
     y = "Z-Score of Case Rate",
-    color = "Population Group",
-    caption = caption_text
+    color = "Population Group"
   )
 
+z_score_plot_clean <- z_score_plot +
+  labs(caption = NULL)
 
-ggsave("covid_density_zscore_scaled_annotated.png", plot = z_score_plot,
-       width = 11, height = 6.5, dpi = 300,
-       device = "png", bg = "white")
-
-z_score_plot
-
-
+z_score_plot_clean
 
 ```
+
+::: notes
+**Notes on Major Events:**
+
+1\. Apr 2020: Dormitory outbreak, strict quarantine, mass testing → rapid decline.\
+2. Jul 2020: Mass testing ramp-up → backlog of asymptomatic cases.\
+3. Aug 2020: Dorms cleared, strict protocols → drop in rates.\
+4. Sep 2021: Spike from easing restrictions, breakthrough infections in vulnerable.\
+5. Oct 2021: Restrictions reinstated → fall in cases.
+:::
+
+## Saving Z-score plot with Captions
+
+```{r}
+#|label: Saving Z-score Normalized Density Plot
+
+caption_text <- paste(
+  "Notes:",
+  "1. Apr 2020: Dormitory outbreak, strict quarantine, mass testing → rapid decline.",
+  "2. Jul 2020: Mass testing ramp-up → backlog of asymptomatic cases.",
+  "3. Aug 2020: Dorms cleared, strict protocols → drop in rates.",
+  "4. Sep 2021: Spike from easing restrictions, breakthrough infections in vulnerable.",
+  "5. Oct 2021: Restrictions reinstated → fall in cases.",
+  sep = "\n"
+)
+
+
+# Add caption back for saving
+z_score_plot_annotated <- z_score_plot +
+  labs(caption = caption_text)
+
+ggsave("covid_density_zscore_scaled.png", plot = z_score_plot_annotated,
+       width = 11, height = 6.5, dpi = 300,
+       device = "png", bg = "white")
+```
+
+# Conclusion
+
+Through this visual analysis, we uncovered how COVID-19’s impact in Singapore varied not just over time, but across population groups and care outcomes. Dormitory outbreaks during early 2020 exposed systemic vulnerabilities, while community cases remained comparatively lower until later waves. By normalizing for population density and scaling severity outcomes, we provided a fairer lens to compare disproportionate risks and burdens. These findings emphasize the importance of equity-driven public health strategies where data transparency, targeted intervention, and structural reform are essential to protect the most vulnerable in future crises.

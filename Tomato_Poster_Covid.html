@@ -8,7 +8,7 @@
 
 <meta name="author" content="Daniel Lip, Pierre Chan, Howard Yeo, Joel Koh, Jolie Yeo, Danish Dol, Sarah Loo">
 
-<title>Tomato Project: Covid Visualization</title>
+<title>Tomato Project: Visualizing COVID-19 Inequities</title>
 <style>
 code{white-space: pre-wrap;}
 span.smallcaps{font-variant: small-caps;}
@@ -80,7 +80,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 
 <header id="title-block-header" class="quarto-title-block default">
 <div class="quarto-title">
-<h1 class="title">Tomato Project: Covid Visualization</h1>
+<h1 class="title">Tomato Project: Visualizing COVID-19 Inequities</h1>
 </div>
 
 
@@ -103,6 +103,12 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </header>
 
 
+<section id="introduction" class="level1">
+<h1>Introduction</h1>
+<p>The COVID-19 pandemic has underscored stark differences in health outcomes across different population groups and stages of medical care. To better understand these disparities, we present a series of visualizations that explore infection patterns, case severity, and system responses in Singapore between 2020 and 2021. This analysis leverages official MOH data to identify key phases of the pandemic, highlight outbreak spikes in vulnerable populations such as migrant workers, and assess the proportional severity of cases using standardized and log-scaled metrics. These visual tools aim to uncover not just what happened, but also who was affected, and to what extent.</p>
+</section>
+<section id="load-libraries" class="level1">
+<h1>Load Libraries</h1>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb1"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Load necessary libraries</span></span>
 <span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(tidyverse)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
@@ -118,8 +124,12 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 ✖ dplyr::lag()    masks stats::lag()
 ℹ Use the conflicted package (&lt;http://conflicted.r-lib.org/&gt;) to force all conflicts to become errors</code></pre>
 </div>
-<div class="sourceCode cell-code" id="cb3"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(lubridate)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb3"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(lubridate)</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(fmsb)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
+</section>
+<section id="load-dataset" class="level1">
+<h1>Load Dataset</h1>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb4"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Load the dataset</span></span>
 <span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>covid_data <span class="ot">&lt;-</span> <span class="fu">read_csv</span>(<span class="st">"covid19_sg.csv"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
@@ -164,6 +174,9 @@ date  (1): Date
 <pre><code>[1] "Total NA values before cleaning: 9083"</code></pre>
 </div>
 </div>
+</section>
+<section id="data-cleaning" class="level1">
+<h1>Data Cleaning</h1>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb10"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Clean dataset: replace NA in numeric columns with 0</span></span>
 <span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a>covid_data <span class="ot">&lt;-</span> covid_data <span class="sc">%&gt;%</span></span>
@@ -197,555 +210,117 @@ Caused by warning:
 <pre><code>[1] "Total 0 values after cleaning: 13064"</code></pre>
 </div>
 </div>
+</section>
+<section id="density-areas-of-dorms-and-comms" class="level1">
+<h1>Density Areas of Dorms and Comms</h1>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb14"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Define fixed population and land area values (2020)</span></span>
-<span id="cb14-2"><a href="#cb14-2" aria-hidden="true" tabindex="-1"></a>dorm_population <span class="ot">&lt;-</span> <span class="dv">311100</span></span>
-<span id="cb14-3"><a href="#cb14-3" aria-hidden="true" tabindex="-1"></a>dorm_land_area <span class="ot">&lt;-</span> <span class="fl">5.0</span></span>
-<span id="cb14-4"><a href="#cb14-4" aria-hidden="true" tabindex="-1"></a>community_population <span class="ot">&lt;-</span> <span class="dv">5685807</span></span>
-<span id="cb14-5"><a href="#cb14-5" aria-hidden="true" tabindex="-1"></a>community_land_area <span class="ot">&lt;-</span> <span class="fl">723.3</span>  <span class="co"># 728.3 - 5.0</span></span>
+<div class="sourceCode cell-code" id="cb14"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Define 2020 values</span></span>
+<span id="cb14-2"><a href="#cb14-2" aria-hidden="true" tabindex="-1"></a>dorm_population_2020      <span class="ot">&lt;-</span> <span class="dv">311100</span></span>
+<span id="cb14-3"><a href="#cb14-3" aria-hidden="true" tabindex="-1"></a>dorm_land_area_2020       <span class="ot">&lt;-</span> <span class="fl">5.0</span></span>
+<span id="cb14-4"><a href="#cb14-4" aria-hidden="true" tabindex="-1"></a>community_population_2020 <span class="ot">&lt;-</span> <span class="dv">5685807</span></span>
+<span id="cb14-5"><a href="#cb14-5" aria-hidden="true" tabindex="-1"></a>community_land_area_2020  <span class="ot">&lt;-</span> <span class="fl">723.3</span></span>
 <span id="cb14-6"><a href="#cb14-6" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb14-7"><a href="#cb14-7" aria-hidden="true" tabindex="-1"></a><span class="co"># Add density-adjusted rates to the dataset</span></span>
-<span id="cb14-8"><a href="#cb14-8" aria-hidden="true" tabindex="-1"></a>covid_clean <span class="ot">&lt;-</span> covid_clean <span class="sc">%&gt;%</span></span>
-<span id="cb14-9"><a href="#cb14-9" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(</span>
-<span id="cb14-10"><a href="#cb14-10" aria-hidden="true" tabindex="-1"></a>    <span class="at">dorm_cases_density_rate =</span> (<span class="st">`</span><span class="at">Local cases residing in dorms MOH report</span><span class="st">`</span> <span class="sc">/</span> dorm_population) <span class="sc">*</span> <span class="dv">100000</span> <span class="sc">/</span> dorm_land_area,</span>
-<span id="cb14-11"><a href="#cb14-11" aria-hidden="true" tabindex="-1"></a>    <span class="at">community_cases_density_rate =</span> (<span class="st">`</span><span class="at">Local cases not residing in doms MOH report</span><span class="st">`</span> <span class="sc">/</span> community_population) <span class="sc">*</span> <span class="dv">100000</span> <span class="sc">/</span> community_land_area</span>
-<span id="cb14-12"><a href="#cb14-12" aria-hidden="true" tabindex="-1"></a>  )</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<span id="cb14-7"><a href="#cb14-7" aria-hidden="true" tabindex="-1"></a><span class="co"># Define 2021 values</span></span>
+<span id="cb14-8"><a href="#cb14-8" aria-hidden="true" tabindex="-1"></a>dorm_population_2021      <span class="ot">&lt;-</span> <span class="dv">318500</span></span>
+<span id="cb14-9"><a href="#cb14-9" aria-hidden="true" tabindex="-1"></a>dorm_land_area_2021       <span class="ot">&lt;-</span> <span class="fl">5.0</span></span>
+<span id="cb14-10"><a href="#cb14-10" aria-hidden="true" tabindex="-1"></a>community_population_2021 <span class="ot">&lt;-</span> <span class="dv">5453566</span></span>
+<span id="cb14-11"><a href="#cb14-11" aria-hidden="true" tabindex="-1"></a>community_land_area_2021  <span class="ot">&lt;-</span> <span class="fl">728.1</span></span>
+<span id="cb14-12"><a href="#cb14-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb14-13"><a href="#cb14-13" aria-hidden="true" tabindex="-1"></a><span class="co"># Add density-adjusted rates based on year</span></span>
+<span id="cb14-14"><a href="#cb14-14" aria-hidden="true" tabindex="-1"></a>covid_clean <span class="ot">&lt;-</span> covid_clean <span class="sc">%&gt;%</span></span>
+<span id="cb14-15"><a href="#cb14-15" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(</span>
+<span id="cb14-16"><a href="#cb14-16" aria-hidden="true" tabindex="-1"></a>    <span class="at">year =</span> lubridate<span class="sc">::</span><span class="fu">year</span>(Date),</span>
+<span id="cb14-17"><a href="#cb14-17" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb14-18"><a href="#cb14-18" aria-hidden="true" tabindex="-1"></a>    <span class="at">dorm_cases_density_rate =</span> <span class="fu">case_when</span>(</span>
+<span id="cb14-19"><a href="#cb14-19" aria-hidden="true" tabindex="-1"></a>      year <span class="sc">==</span> <span class="dv">2020</span> <span class="sc">~</span> (<span class="st">`</span><span class="at">Local cases residing in dorms MOH report</span><span class="st">`</span> <span class="sc">/</span> dorm_population_2020) <span class="sc">*</span> <span class="dv">100000</span> <span class="sc">/</span> dorm_land_area_2020,</span>
+<span id="cb14-20"><a href="#cb14-20" aria-hidden="true" tabindex="-1"></a>      year <span class="sc">==</span> <span class="dv">2021</span> <span class="sc">~</span> (<span class="st">`</span><span class="at">Local cases residing in dorms MOH report</span><span class="st">`</span> <span class="sc">/</span> dorm_population_2021) <span class="sc">*</span> <span class="dv">100000</span> <span class="sc">/</span> dorm_land_area_2021,</span>
+<span id="cb14-21"><a href="#cb14-21" aria-hidden="true" tabindex="-1"></a>      <span class="cn">TRUE</span>         <span class="sc">~</span> <span class="cn">NA_real_</span></span>
+<span id="cb14-22"><a href="#cb14-22" aria-hidden="true" tabindex="-1"></a>    ),</span>
+<span id="cb14-23"><a href="#cb14-23" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb14-24"><a href="#cb14-24" aria-hidden="true" tabindex="-1"></a>    <span class="at">community_cases_density_rate =</span> <span class="fu">case_when</span>(</span>
+<span id="cb14-25"><a href="#cb14-25" aria-hidden="true" tabindex="-1"></a>      year <span class="sc">==</span> <span class="dv">2020</span> <span class="sc">~</span> (<span class="st">`</span><span class="at">Local cases not residing in doms MOH report</span><span class="st">`</span> <span class="sc">/</span> community_population_2020) <span class="sc">*</span> <span class="dv">100000</span> <span class="sc">/</span> community_land_area_2020,</span>
+<span id="cb14-26"><a href="#cb14-26" aria-hidden="true" tabindex="-1"></a>      year <span class="sc">==</span> <span class="dv">2021</span> <span class="sc">~</span> (<span class="st">`</span><span class="at">Local cases not residing in doms MOH report</span><span class="st">`</span> <span class="sc">/</span> community_population_2021) <span class="sc">*</span> <span class="dv">100000</span> <span class="sc">/</span> community_land_area_2021,</span>
+<span id="cb14-27"><a href="#cb14-27" aria-hidden="true" tabindex="-1"></a>      <span class="cn">TRUE</span>         <span class="sc">~</span> <span class="cn">NA_real_</span></span>
+<span id="cb14-28"><a href="#cb14-28" aria-hidden="true" tabindex="-1"></a>    )</span>
+<span id="cb14-29"><a href="#cb14-29" aria-hidden="true" tabindex="-1"></a>  )</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
+</section>
+<section id="severity-radar-chart" class="level1">
+<h1>Severity Radar Chart</h1>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb15"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(patchwork)</span>
-<span id="cb15-2"><a href="#cb15-2" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(zoo)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<div class="cell-output cell-output-stderr">
-<pre><code>
-Attaching package: 'zoo'</code></pre>
+<div class="cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="Tomato_Poster_Covid_files/figure-html/Display%20Severity%20Radar%20chart%20(Deaths,%20ICU,%20Hospitalised%20rates)-1.png" class="img-fluid figure-img" width="3000"></p>
+</figure>
 </div>
-<div class="cell-output cell-output-stderr">
-<pre><code>The following objects are masked from 'package:base':
-
-    as.Date, as.Date.numeric</code></pre>
 </div>
-<div class="sourceCode cell-code" id="cb18"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb18-1"><a href="#cb18-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Filter data for focus period</span></span>
-<span id="cb18-2"><a href="#cb18-2" aria-hidden="true" tabindex="-1"></a>covid_focus <span class="ot">&lt;-</span> covid_clean <span class="sc">%&gt;%</span></span>
-<span id="cb18-3"><a href="#cb18-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(Date <span class="sc">&gt;=</span> <span class="fu">as.Date</span>(<span class="st">"2020-04-01"</span>) <span class="sc">&amp;</span> Date <span class="sc">&lt;=</span> <span class="fu">as.Date</span>(<span class="st">"2020-09-30"</span>)) <span class="sc">%&gt;%</span></span>
-<span id="cb18-4"><a href="#cb18-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">select</span>(Date,</span>
-<span id="cb18-5"><a href="#cb18-5" aria-hidden="true" tabindex="-1"></a>         <span class="at">Dormitory =</span> <span class="st">`</span><span class="at">Local cases residing in dorms MOH report</span><span class="st">`</span>,</span>
-<span id="cb18-6"><a href="#cb18-6" aria-hidden="true" tabindex="-1"></a>         <span class="at">Community =</span> <span class="st">`</span><span class="at">Local cases not residing in doms MOH report</span><span class="st">`</span>) <span class="sc">%&gt;%</span></span>
-<span id="cb18-7"><a href="#cb18-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(</span>
-<span id="cb18-8"><a href="#cb18-8" aria-hidden="true" tabindex="-1"></a>    <span class="at">Dormitory_MA =</span> <span class="fu">rollmean</span>(Dormitory, <span class="at">k =</span> <span class="dv">7</span>, <span class="at">fill =</span> <span class="cn">NA</span>, <span class="at">align =</span> <span class="st">"right"</span>),</span>
-<span id="cb18-9"><a href="#cb18-9" aria-hidden="true" tabindex="-1"></a>    <span class="at">Community_MA =</span> <span class="fu">rollmean</span>(Community, <span class="at">k =</span> <span class="dv">7</span>, <span class="at">fill =</span> <span class="cn">NA</span>, <span class="at">align =</span> <span class="st">"right"</span>),</span>
-<span id="cb18-10"><a href="#cb18-10" aria-hidden="true" tabindex="-1"></a>    <span class="at">Month =</span> <span class="fu">floor_date</span>(Date, <span class="st">"month"</span>)</span>
-<span id="cb18-11"><a href="#cb18-11" aria-hidden="true" tabindex="-1"></a>  )</span>
-<span id="cb18-12"><a href="#cb18-12" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb18-13"><a href="#cb18-13" aria-hidden="true" tabindex="-1"></a><span class="co"># Dynamically compute monthly peak rows</span></span>
-<span id="cb18-14"><a href="#cb18-14" aria-hidden="true" tabindex="-1"></a>dorm_peaks <span class="ot">&lt;-</span> covid_focus <span class="sc">%&gt;%</span></span>
-<span id="cb18-15"><a href="#cb18-15" aria-hidden="true" tabindex="-1"></a>  <span class="fu">group_by</span>(Month) <span class="sc">%&gt;%</span></span>
-<span id="cb18-16"><a href="#cb18-16" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(Dormitory <span class="sc">==</span> <span class="fu">max</span>(Dormitory, <span class="at">na.rm =</span> <span class="cn">TRUE</span>)) <span class="sc">%&gt;%</span></span>
-<span id="cb18-17"><a href="#cb18-17" aria-hidden="true" tabindex="-1"></a>  <span class="fu">slice</span>(<span class="dv">1</span>) <span class="sc">%&gt;%</span>  <span class="co"># Ensure only one row per month</span></span>
-<span id="cb18-18"><a href="#cb18-18" aria-hidden="true" tabindex="-1"></a>  <span class="fu">ungroup</span>() <span class="sc">%&gt;%</span></span>
-<span id="cb18-19"><a href="#cb18-19" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">Label =</span> <span class="fu">paste0</span>(<span class="fu">format</span>(Date, <span class="st">"%b %d"</span>), <span class="st">": "</span>, Dormitory, <span class="st">" cases"</span>),</span>
-<span id="cb18-20"><a href="#cb18-20" aria-hidden="true" tabindex="-1"></a>         <span class="at">Month =</span> <span class="fu">floor_date</span>(Month, <span class="st">"month"</span>))  <span class="co"># Ensure it's 1st of month</span></span>
-<span id="cb18-21"><a href="#cb18-21" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb18-22"><a href="#cb18-22" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb18-23"><a href="#cb18-23" aria-hidden="true" tabindex="-1"></a>comm_peaks <span class="ot">&lt;-</span> covid_focus <span class="sc">%&gt;%</span></span>
-<span id="cb18-24"><a href="#cb18-24" aria-hidden="true" tabindex="-1"></a>  <span class="fu">group_by</span>(Month) <span class="sc">%&gt;%</span></span>
-<span id="cb18-25"><a href="#cb18-25" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(Community <span class="sc">==</span> <span class="fu">max</span>(Community, <span class="at">na.rm =</span> <span class="cn">TRUE</span>)) <span class="sc">%&gt;%</span></span>
-<span id="cb18-26"><a href="#cb18-26" aria-hidden="true" tabindex="-1"></a>  <span class="fu">slice</span>(<span class="dv">1</span>) <span class="sc">%&gt;%</span></span>
-<span id="cb18-27"><a href="#cb18-27" aria-hidden="true" tabindex="-1"></a>  <span class="fu">ungroup</span>() <span class="sc">%&gt;%</span></span>
-<span id="cb18-28"><a href="#cb18-28" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">Label =</span> <span class="fu">paste0</span>(<span class="fu">format</span>(Date, <span class="st">"%b %d"</span>), <span class="st">": "</span>, Community, <span class="st">" cases"</span>),</span>
-<span id="cb18-29"><a href="#cb18-29" aria-hidden="true" tabindex="-1"></a>         <span class="at">Month =</span> <span class="fu">floor_date</span>(Month, <span class="st">"month"</span>))</span>
-<span id="cb18-30"><a href="#cb18-30" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb18-31"><a href="#cb18-31" aria-hidden="true" tabindex="-1"></a><span class="co"># Point of interest (June 25)</span></span>
-<span id="cb18-32"><a href="#cb18-32" aria-hidden="true" tabindex="-1"></a>annotate_point <span class="ot">&lt;-</span> <span class="fu">as.Date</span>(<span class="st">"2020-06-25"</span>)</span>
-<span id="cb18-33"><a href="#cb18-33" aria-hidden="true" tabindex="-1"></a>annotate_y <span class="ot">&lt;-</span> covid_focus <span class="sc">%&gt;%</span> <span class="fu">filter</span>(Date <span class="sc">==</span> annotate_point) <span class="sc">%&gt;%</span> <span class="fu">pull</span>(Dormitory_MA)</span>
-<span id="cb18-34"><a href="#cb18-34" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb18-35"><a href="#cb18-35" aria-hidden="true" tabindex="-1"></a><span class="co"># Plot 1: Dormitory Cases</span></span>
-<span id="cb18-36"><a href="#cb18-36" aria-hidden="true" tabindex="-1"></a>p1 <span class="ot">&lt;-</span> <span class="fu">ggplot</span>(covid_focus, <span class="fu">aes</span>(<span class="at">x =</span> Date)) <span class="sc">+</span></span>
-<span id="cb18-37"><a href="#cb18-37" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_line</span>(</span>
-<span id="cb18-38"><a href="#cb18-38" aria-hidden="true" tabindex="-1"></a>    <span class="fu">aes</span>(<span class="at">y =</span> Dormitory, <span class="at">color =</span> <span class="st">"Daily Cases"</span>),</span>
-<span id="cb18-39"><a href="#cb18-39" aria-hidden="true" tabindex="-1"></a>    <span class="at">alpha =</span> <span class="fl">0.4</span>) <span class="sc">+</span></span>
-<span id="cb18-40"><a href="#cb18-40" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_line</span>(</span>
-<span id="cb18-41"><a href="#cb18-41" aria-hidden="true" tabindex="-1"></a>    <span class="fu">aes</span>(<span class="at">y =</span> Dormitory_MA, <span class="at">color =</span> <span class="st">"Weekly Trend"</span>),</span>
-<span id="cb18-42"><a href="#cb18-42" aria-hidden="true" tabindex="-1"></a>    <span class="at">size =</span> <span class="dv">1</span>) <span class="sc">+</span></span>
-<span id="cb18-43"><a href="#cb18-43" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_vline</span>(</span>
-<span id="cb18-44"><a href="#cb18-44" aria-hidden="true" tabindex="-1"></a>    <span class="at">xintercept =</span> <span class="fu">as.Date</span>(<span class="st">"2020-04-07"</span>),</span>
-<span id="cb18-45"><a href="#cb18-45" aria-hidden="true" tabindex="-1"></a>    <span class="at">linetype =</span> <span class="st">"dashed"</span>,</span>
-<span id="cb18-46"><a href="#cb18-46" aria-hidden="true" tabindex="-1"></a>    <span class="at">color =</span> <span class="st">"black"</span>) <span class="sc">+</span></span>
-<span id="cb18-47"><a href="#cb18-47" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_vline</span>(</span>
-<span id="cb18-48"><a href="#cb18-48" aria-hidden="true" tabindex="-1"></a>    <span class="at">xintercept =</span> <span class="fu">as.Date</span>(<span class="st">"2020-06-01"</span>),</span>
-<span id="cb18-49"><a href="#cb18-49" aria-hidden="true" tabindex="-1"></a>    <span class="at">linetype =</span> <span class="st">"dashed"</span>,</span>
-<span id="cb18-50"><a href="#cb18-50" aria-hidden="true" tabindex="-1"></a>    <span class="at">color =</span> <span class="st">"black"</span>) <span class="sc">+</span></span>
-<span id="cb18-51"><a href="#cb18-51" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_text</span>(</span>
-<span id="cb18-52"><a href="#cb18-52" aria-hidden="true" tabindex="-1"></a>    <span class="at">data =</span> dorm_peaks,</span>
-<span id="cb18-53"><a href="#cb18-53" aria-hidden="true" tabindex="-1"></a>    <span class="fu">aes</span>(<span class="at">x =</span> Month, <span class="at">y =</span> <span class="sc">-</span><span class="dv">20</span>, <span class="at">label =</span> Label),</span>
-<span id="cb18-54"><a href="#cb18-54" aria-hidden="true" tabindex="-1"></a>    <span class="at">inherit.aes =</span> <span class="cn">FALSE</span>, </span>
-<span id="cb18-55"><a href="#cb18-55" aria-hidden="true" tabindex="-1"></a>    <span class="at">vjust =</span> <span class="sc">-</span><span class="fl">0.8</span>, <span class="at">size =</span> <span class="dv">3</span>, <span class="at">color =</span> <span class="st">"navy"</span>) <span class="sc">+</span></span>
-<span id="cb18-56"><a href="#cb18-56" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_point</span>(</span>
-<span id="cb18-57"><a href="#cb18-57" aria-hidden="true" tabindex="-1"></a>    <span class="fu">aes</span>(<span class="at">x =</span> annotate_point, <span class="at">y =</span> annotate_y), </span>
-<span id="cb18-58"><a href="#cb18-58" aria-hidden="true" tabindex="-1"></a>    <span class="at">color =</span> <span class="st">"navy"</span>, <span class="at">size =</span> <span class="fl">2.5</span>) <span class="sc">+</span> </span>
-<span id="cb18-59"><a href="#cb18-59" aria-hidden="true" tabindex="-1"></a>   <span class="fu">geom_segment</span>(</span>
-<span id="cb18-60"><a href="#cb18-60" aria-hidden="true" tabindex="-1"></a>     <span class="fu">aes</span>(<span class="at">x =</span> annotate_point, <span class="at">y =</span> annotate_y, <span class="at">xend =</span> annotate_point <span class="sc">+</span> <span class="dv">15</span>, <span class="at">yend =</span> annotate_y <span class="sc">+</span> <span class="dv">300</span>),</span>
-<span id="cb18-61"><a href="#cb18-61" aria-hidden="true" tabindex="-1"></a>     <span class="at">arrow =</span> <span class="fu">arrow</span>(<span class="at">length =</span> <span class="fu">unit</span>(<span class="fl">0.15</span>, <span class="st">"cm"</span>)),</span>
-<span id="cb18-62"><a href="#cb18-62" aria-hidden="true" tabindex="-1"></a>     <span class="at">color =</span> <span class="st">"navy"</span>, <span class="at">linetype =</span> <span class="st">"dotted"</span>) <span class="sc">+</span></span>
-<span id="cb18-63"><a href="#cb18-63" aria-hidden="true" tabindex="-1"></a>  <span class="fu">annotate</span>(<span class="st">"text"</span>, </span>
-<span id="cb18-64"><a href="#cb18-64" aria-hidden="true" tabindex="-1"></a>            <span class="at">x =</span> <span class="fu">as.Date</span>(<span class="st">"2020-04-10"</span>), </span>
-<span id="cb18-65"><a href="#cb18-65" aria-hidden="true" tabindex="-1"></a>            <span class="at">y =</span> <span class="fu">max</span>(covid_focus<span class="sc">$</span>Dormitory, <span class="at">na.rm =</span> <span class="cn">TRUE</span>),</span>
-<span id="cb18-66"><a href="#cb18-66" aria-hidden="true" tabindex="-1"></a>            <span class="at">label =</span> <span class="st">"Start of Circuit Breaker"</span>,</span>
-<span id="cb18-67"><a href="#cb18-67" aria-hidden="true" tabindex="-1"></a>            <span class="at">hjust =</span> <span class="dv">0</span>, <span class="at">vjust =</span> <span class="sc">-</span><span class="fl">1.2</span>, <span class="at">size =</span> <span class="dv">3</span>) <span class="sc">+</span></span>
-<span id="cb18-68"><a href="#cb18-68" aria-hidden="true" tabindex="-1"></a>  <span class="fu">annotate</span>(<span class="st">"text"</span>,</span>
-<span id="cb18-69"><a href="#cb18-69" aria-hidden="true" tabindex="-1"></a>           <span class="at">x =</span> <span class="fu">as.Date</span>(<span class="st">"2020-06-04"</span>),</span>
-<span id="cb18-70"><a href="#cb18-70" aria-hidden="true" tabindex="-1"></a>           <span class="at">y =</span> <span class="fu">max</span>(covid_focus<span class="sc">$</span>Dormitory, <span class="at">na.rm =</span> <span class="cn">TRUE</span>),</span>
-<span id="cb18-71"><a href="#cb18-71" aria-hidden="true" tabindex="-1"></a>           <span class="at">label =</span> <span class="st">"End of Circuit Breaker"</span>,</span>
-<span id="cb18-72"><a href="#cb18-72" aria-hidden="true" tabindex="-1"></a>           <span class="at">hjust =</span> <span class="dv">0</span>, <span class="at">vjust =</span> <span class="sc">-</span><span class="fl">1.2</span>, <span class="at">size =</span> <span class="dv">3</span>) <span class="sc">+</span></span>
-<span id="cb18-73"><a href="#cb18-73" aria-hidden="true" tabindex="-1"></a>  <span class="fu">annotate</span>(<span class="st">"text"</span>,</span>
-<span id="cb18-74"><a href="#cb18-74" aria-hidden="true" tabindex="-1"></a>           <span class="at">x =</span> annotate_point <span class="sc">+</span> <span class="dv">16</span>,</span>
-<span id="cb18-75"><a href="#cb18-75" aria-hidden="true" tabindex="-1"></a>           <span class="at">y =</span> annotate_y <span class="sc">+</span> <span class="dv">300</span>,</span>
-<span id="cb18-76"><a href="#cb18-76" aria-hidden="true" tabindex="-1"></a>           <span class="at">label =</span> <span class="st">"Aggressive testing &amp; dorm clearance</span><span class="sc">\n</span><span class="st">(MOH press release 25 Jun)"</span>,</span>
-<span id="cb18-77"><a href="#cb18-77" aria-hidden="true" tabindex="-1"></a>           <span class="at">hjust =</span> <span class="dv">0</span>, <span class="at">size =</span> <span class="dv">3</span>, <span class="at">color =</span> <span class="st">"navy"</span>) <span class="sc">+</span></span>
-<span id="cb18-78"><a href="#cb18-78" aria-hidden="true" tabindex="-1"></a>  <span class="fu">scale_x_date</span>(</span>
-<span id="cb18-79"><a href="#cb18-79" aria-hidden="true" tabindex="-1"></a>    <span class="at">breaks =</span> <span class="fu">seq</span>(<span class="fu">as.Date</span>(<span class="st">"2020-04-01"</span>), <span class="fu">as.Date</span>(<span class="st">"2020-09-30"</span>), <span class="at">by =</span> <span class="st">"1 month"</span>),</span>
-<span id="cb18-80"><a href="#cb18-80" aria-hidden="true" tabindex="-1"></a>    <span class="at">date_labels =</span> <span class="st">"%b"</span>,</span>
-<span id="cb18-81"><a href="#cb18-81" aria-hidden="true" tabindex="-1"></a>    <span class="at">limits =</span> <span class="fu">c</span>(<span class="fu">as.Date</span>(<span class="st">"2020-04-01"</span>), <span class="fu">as.Date</span>(<span class="st">"2020-09-30"</span>))</span>
-<span id="cb18-82"><a href="#cb18-82" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">+</span></span>
-<span id="cb18-83"><a href="#cb18-83" aria-hidden="true" tabindex="-1"></a>  <span class="fu">scale_color_manual</span>(</span>
-<span id="cb18-84"><a href="#cb18-84" aria-hidden="true" tabindex="-1"></a>    <span class="at">values =</span> <span class="fu">c</span>(<span class="st">"Daily Cases"</span> <span class="ot">=</span> <span class="st">"steelblue"</span>, <span class="st">"Weekly Trend"</span> <span class="ot">=</span> <span class="st">"navy"</span>)) <span class="sc">+</span></span>
-<span id="cb18-85"><a href="#cb18-85" aria-hidden="true" tabindex="-1"></a>  <span class="fu">labs</span>(</span>
-<span id="cb18-86"><a href="#cb18-86" aria-hidden="true" tabindex="-1"></a>    <span class="at">title =</span> <span class="st">"COVID-19 Cases in Migrant Worker Dormitories"</span>,</span>
-<span id="cb18-87"><a href="#cb18-87" aria-hidden="true" tabindex="-1"></a>    <span class="at">subtitle =</span> <span class="st">"Daily confirmed cases and weekly trend (Apr–Sep 2020)"</span>,</span>
-<span id="cb18-88"><a href="#cb18-88" aria-hidden="true" tabindex="-1"></a>    <span class="at">caption =</span> <span class="st">"- Weekly trend is a 7-day moving average used to smooth daily fluctuations.</span><span class="sc">\n</span><span class="st">- Labeled dates indicate the highest number of cases recorded each month."</span>,</span>
-<span id="cb18-89"><a href="#cb18-89" aria-hidden="true" tabindex="-1"></a>    <span class="at">y =</span> <span class="st">"Dormitory Cases"</span>, <span class="at">x =</span> <span class="cn">NULL</span>, <span class="at">color =</span> <span class="cn">NULL</span>) <span class="sc">+</span></span>
-<span id="cb18-90"><a href="#cb18-90" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme_minimal</span>() <span class="sc">+</span></span>
-<span id="cb18-91"><a href="#cb18-91" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme</span>(<span class="at">legend.position =</span> <span class="st">"top"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<div class="notes">
+<p><strong>Notes on Severity Metrics (Apr–Sep 2020):</strong><br>
+1. <strong>Hospitalisations</strong> were the most frequent severe outcome, totaling 88,869 — influenced by policies requiring all positive cases to be admitted.<br>
+2. <strong>ICU admissions</strong> (1,328) were significantly fewer, reflecting effective triage, younger patient profile, and adequate healthcare capacity.<br>
+3. <strong>Deaths</strong> (24) remained exceptionally low during this period, likely due to robust containment within vulnerable groups and strong healthcare response.<br>
+4. Severity values are log-scaled and normalized to emphasize proportional differences across outcome types.</p>
+</div>
+</section>
+<section id="density-based-plot-z-score" class="level1">
+<h1>Density Based Plot (Z-score)</h1>
+<div class="cell" data-layout-align="center">
 <div class="cell-output cell-output-stderr">
 <pre><code>Warning: Using `size` aesthetic for lines was deprecated in ggplot2 3.4.0.
 ℹ Please use `linewidth` instead.</code></pre>
 </div>
-<div class="sourceCode cell-code" id="cb20"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb20-1"><a href="#cb20-1" aria-hidden="true" tabindex="-1"></a><span class="co"># April spike annotation for Dormitory cases</span></span>
-<span id="cb20-2"><a href="#cb20-2" aria-hidden="true" tabindex="-1"></a>combined_apr <span class="ot">&lt;-</span> <span class="fu">as.Date</span>(<span class="st">"2020-04-20"</span>)</span>
-<span id="cb20-3"><a href="#cb20-3" aria-hidden="true" tabindex="-1"></a>combined_apr_y <span class="ot">&lt;-</span> covid_focus <span class="sc">%&gt;%</span> <span class="fu">filter</span>(Date <span class="sc">==</span> combined_apr) <span class="sc">%&gt;%</span> <span class="fu">pull</span>(Dormitory_MA)</span>
-<span id="cb20-4"><a href="#cb20-4" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb20-5"><a href="#cb20-5" aria-hidden="true" tabindex="-1"></a>p1 <span class="ot">&lt;-</span> p1 <span class="sc">+</span></span>
-<span id="cb20-6"><a href="#cb20-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_point</span>(<span class="fu">aes</span>(<span class="at">x =</span> combined_apr, <span class="at">y =</span> combined_apr_y), <span class="at">color =</span> <span class="st">"navy"</span>, <span class="at">size =</span> <span class="fl">2.5</span>) <span class="sc">+</span></span>
-<span id="cb20-7"><a href="#cb20-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_segment</span>(<span class="fu">aes</span>(<span class="at">x =</span> combined_apr, <span class="at">y =</span> combined_apr_y,</span>
-<span id="cb20-8"><a href="#cb20-8" aria-hidden="true" tabindex="-1"></a>                   <span class="at">xend =</span> combined_apr <span class="sc">+</span> <span class="dv">17</span>, <span class="at">yend =</span> combined_apr_y <span class="sc">+</span> <span class="dv">350</span>), <span class="at">arrow =</span> <span class="fu">arrow</span>(<span class="at">length =</span> <span class="fu">unit</span>(<span class="fl">0.15</span>, <span class="st">"cm"</span>)), <span class="at">color =</span> <span class="st">"navy"</span>, <span class="at">linetype =</span> <span class="st">"dotted"</span>) <span class="sc">+</span></span>
-<span id="cb20-9"><a href="#cb20-9" aria-hidden="true" tabindex="-1"></a>  <span class="fu">annotate</span>(<span class="st">"text"</span>,</span>
-<span id="cb20-10"><a href="#cb20-10" aria-hidden="true" tabindex="-1"></a>           <span class="at">x =</span> combined_apr <span class="sc">+</span> <span class="dv">18</span>,</span>
-<span id="cb20-11"><a href="#cb20-11" aria-hidden="true" tabindex="-1"></a>           <span class="at">y =</span> combined_apr_y <span class="sc">+</span> <span class="dv">350</span>,</span>
-<span id="cb20-12"><a href="#cb20-12" aria-hidden="true" tabindex="-1"></a>           <span class="at">label =</span> <span class="st">"Record spike driven by ramped-up</span><span class="sc">\n</span><span class="st">dormitory testing (Apr 20–28, MOH)"</span>,</span>
-<span id="cb20-13"><a href="#cb20-13" aria-hidden="true" tabindex="-1"></a>           <span class="at">hjust =</span> <span class="dv">0</span>, <span class="at">size =</span> <span class="dv">3</span>, <span class="at">color =</span> <span class="st">"navy"</span>)</span>
-<span id="cb20-14"><a href="#cb20-14" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb20-15"><a href="#cb20-15" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb20-16"><a href="#cb20-16" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb20-17"><a href="#cb20-17" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb20-18"><a href="#cb20-18" aria-hidden="true" tabindex="-1"></a><span class="co"># Plot 2: Community Cases</span></span>
-<span id="cb20-19"><a href="#cb20-19" aria-hidden="true" tabindex="-1"></a>p2 <span class="ot">&lt;-</span> <span class="fu">ggplot</span>(covid_focus, <span class="fu">aes</span>(<span class="at">x =</span> Date)) <span class="sc">+</span></span>
-<span id="cb20-20"><a href="#cb20-20" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_line</span>(<span class="fu">aes</span>(<span class="at">y =</span> Community, <span class="at">color =</span> <span class="st">"Daily Cases"</span>), <span class="at">alpha =</span> <span class="fl">0.4</span>) <span class="sc">+</span></span>
-<span id="cb20-21"><a href="#cb20-21" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_line</span>(<span class="fu">aes</span>(<span class="at">y =</span> Community_MA, <span class="at">color =</span> <span class="st">"Weekly Trend"</span>), <span class="at">size =</span> <span class="dv">1</span>) <span class="sc">+</span></span>
-<span id="cb20-22"><a href="#cb20-22" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_vline</span>(<span class="at">xintercept =</span> <span class="fu">as.Date</span>(<span class="st">"2020-04-07"</span>), <span class="at">linetype =</span> <span class="st">"dashed"</span>, <span class="at">color =</span> <span class="st">"black"</span>) <span class="sc">+</span></span>
-<span id="cb20-23"><a href="#cb20-23" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_vline</span>(<span class="at">xintercept =</span> <span class="fu">as.Date</span>(<span class="st">"2020-06-01"</span>), <span class="at">linetype =</span> <span class="st">"dashed"</span>, <span class="at">color =</span> <span class="st">"black"</span>) <span class="sc">+</span></span>
-<span id="cb20-24"><a href="#cb20-24" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_text</span>(<span class="at">data =</span> comm_peaks, <span class="fu">aes</span>(<span class="at">x =</span> Month, <span class="at">y =</span> <span class="sc">-</span><span class="dv">20</span>, <span class="at">label =</span> Label),</span>
-<span id="cb20-25"><a href="#cb20-25" aria-hidden="true" tabindex="-1"></a>          <span class="at">inherit.aes =</span> <span class="cn">FALSE</span>, <span class="at">vjust =</span> <span class="sc">-</span><span class="fl">0.8</span>, <span class="at">size =</span> <span class="dv">3</span>, <span class="at">color =</span> <span class="st">"firebrick"</span>) <span class="sc">+</span></span>
-<span id="cb20-26"><a href="#cb20-26" aria-hidden="true" tabindex="-1"></a>  <span class="fu">annotate</span>(<span class="st">"text"</span>, <span class="at">x =</span> <span class="fu">as.Date</span>(<span class="st">"2020-04-10"</span>), <span class="at">y =</span> <span class="fu">max</span>(covid_focus<span class="sc">$</span>Community, <span class="at">na.rm =</span> <span class="cn">TRUE</span>),</span>
-<span id="cb20-27"><a href="#cb20-27" aria-hidden="true" tabindex="-1"></a>           <span class="at">label =</span> <span class="st">"Start of Circuit Breaker"</span>, <span class="at">hjust =</span> <span class="dv">0</span>, <span class="at">vjust =</span> <span class="sc">-</span><span class="fl">1.2</span>, <span class="at">size =</span> <span class="dv">3</span>) <span class="sc">+</span></span>
-<span id="cb20-28"><a href="#cb20-28" aria-hidden="true" tabindex="-1"></a>  <span class="fu">annotate</span>(<span class="st">"text"</span>, <span class="at">x =</span> <span class="fu">as.Date</span>(<span class="st">"2020-06-04"</span>), <span class="at">y =</span> <span class="fu">max</span>(covid_focus<span class="sc">$</span>Community, <span class="at">na.rm =</span> <span class="cn">TRUE</span>),</span>
-<span id="cb20-29"><a href="#cb20-29" aria-hidden="true" tabindex="-1"></a>           <span class="at">label =</span> <span class="st">"End of Circuit Breaker"</span>, <span class="at">hjust =</span> <span class="dv">0</span>, <span class="at">vjust =</span> <span class="sc">-</span><span class="fl">1.2</span>, <span class="at">size =</span> <span class="dv">3</span>) <span class="sc">+</span></span>
-<span id="cb20-30"><a href="#cb20-30" aria-hidden="true" tabindex="-1"></a>  <span class="fu">scale_x_date</span>(</span>
-<span id="cb20-31"><a href="#cb20-31" aria-hidden="true" tabindex="-1"></a>    <span class="at">breaks =</span> <span class="fu">seq</span>(<span class="fu">as.Date</span>(<span class="st">"2020-04-01"</span>), <span class="fu">as.Date</span>(<span class="st">"2020-09-30"</span>), <span class="at">by =</span> <span class="st">"1 month"</span>),</span>
-<span id="cb20-32"><a href="#cb20-32" aria-hidden="true" tabindex="-1"></a>    <span class="at">date_labels =</span> <span class="st">"%b"</span>,</span>
-<span id="cb20-33"><a href="#cb20-33" aria-hidden="true" tabindex="-1"></a>    <span class="at">limits =</span> <span class="fu">c</span>(<span class="fu">as.Date</span>(<span class="st">"2020-04-01"</span>), <span class="fu">as.Date</span>(<span class="st">"2020-09-30"</span>))</span>
-<span id="cb20-34"><a href="#cb20-34" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">+</span></span>
-<span id="cb20-35"><a href="#cb20-35" aria-hidden="true" tabindex="-1"></a>  <span class="fu">scale_color_manual</span>(<span class="at">values =</span> <span class="fu">c</span>(<span class="st">"Daily Cases"</span> <span class="ot">=</span> <span class="st">"darkred"</span>, <span class="st">"Weekly Trend"</span> <span class="ot">=</span> <span class="st">"firebrick"</span>)) <span class="sc">+</span></span>
-<span id="cb20-36"><a href="#cb20-36" aria-hidden="true" tabindex="-1"></a>  <span class="fu">labs</span>(</span>
-<span id="cb20-37"><a href="#cb20-37" aria-hidden="true" tabindex="-1"></a>    <span class="at">title =</span> <span class="st">"COVID-19 Cases in the Community"</span>,</span>
-<span id="cb20-38"><a href="#cb20-38" aria-hidden="true" tabindex="-1"></a>    <span class="at">subtitle =</span> <span class="st">"Daily confirmed cases and weekly trend (Apr–Sep 2020)"</span>,</span>
-<span id="cb20-39"><a href="#cb20-39" aria-hidden="true" tabindex="-1"></a>    <span class="at">caption =</span> <span class="st">"- Weekly trend is a 7-day moving average used to smooth daily fluctuations.</span><span class="sc">\n</span><span class="st">- Labeled dates indicate the highest number of cases recorded each month."</span>,</span>
-<span id="cb20-40"><a href="#cb20-40" aria-hidden="true" tabindex="-1"></a>    <span class="at">y =</span> <span class="st">"Community Cases"</span>, <span class="at">x =</span> <span class="st">"Date"</span>, <span class="at">color =</span> <span class="cn">NULL</span></span>
-<span id="cb20-41"><a href="#cb20-41" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">+</span></span>
-<span id="cb20-42"><a href="#cb20-42" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme_minimal</span>() <span class="sc">+</span></span>
-<span id="cb20-43"><a href="#cb20-43" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme</span>(<span class="at">legend.position =</span> <span class="st">"top"</span>)</span>
-<span id="cb20-44"><a href="#cb20-44" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb20-45"><a href="#cb20-45" aria-hidden="true" tabindex="-1"></a><span class="co"># Save each plot separately</span></span>
-<span id="cb20-46"><a href="#cb20-46" aria-hidden="true" tabindex="-1"></a><span class="fu">ggsave</span>(<span class="st">"covid_dormitory_plot.png"</span>, p1, <span class="at">width =</span> <span class="dv">12</span>, <span class="at">height =</span> <span class="dv">6</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stderr">
-<pre><code>Warning in geom_point(aes(x = annotate_point, y = annotate_y), color = "navy", : All aesthetics have length 1, but the data has 183 rows.
-ℹ Please consider using `annotate()` or provide this layer with data containing
-  a single row.</code></pre>
-</div>
-<div class="cell-output cell-output-stderr">
-<pre><code>Warning in geom_segment(aes(x = annotate_point, y = annotate_y, xend = annotate_point + : All aesthetics have length 1, but the data has 183 rows.
-ℹ Please consider using `annotate()` or provide this layer with data containing
-  a single row.</code></pre>
-</div>
-<div class="cell-output cell-output-stderr">
-<pre><code>Warning in geom_point(aes(x = combined_apr, y = combined_apr_y), color = "navy", : All aesthetics have length 1, but the data has 183 rows.
-ℹ Please consider using `annotate()` or provide this layer with data containing
-  a single row.</code></pre>
-</div>
-<div class="cell-output cell-output-stderr">
-<pre><code>Warning in geom_segment(aes(x = combined_apr, y = combined_apr_y, xend = combined_apr + : All aesthetics have length 1, but the data has 183 rows.
-ℹ Please consider using `annotate()` or provide this layer with data containing
-  a single row.</code></pre>
-</div>
-<div class="cell-output cell-output-stderr">
-<pre><code>Warning: Removed 6 rows containing missing values or values outside the scale range
-(`geom_line()`).</code></pre>
-</div>
-<div class="sourceCode cell-code" id="cb26"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb26-1"><a href="#cb26-1" aria-hidden="true" tabindex="-1"></a><span class="fu">ggsave</span>(<span class="st">"covid_community_plot.png"</span>, p2, <span class="at">width =</span> <span class="dv">12</span>, <span class="at">height =</span> <span class="dv">6</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<div class="cell-output cell-output-stderr">
-<pre><code>Warning: Removed 6 rows containing missing values or values outside the scale range
-(`geom_line()`).</code></pre>
-</div>
-<div class="sourceCode cell-code" id="cb28"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb28-1"><a href="#cb28-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Optionally display each one in sequence</span></span>
-<span id="cb28-2"><a href="#cb28-2" aria-hidden="true" tabindex="-1"></a>p1</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<div class="cell-output cell-output-stderr">
-<pre><code>Warning in geom_point(aes(x = annotate_point, y = annotate_y), color = "navy", : All aesthetics have length 1, but the data has 183 rows.
-ℹ Please consider using `annotate()` or provide this layer with data containing
-  a single row.</code></pre>
-</div>
-<div class="cell-output cell-output-stderr">
-<pre><code>Warning in geom_segment(aes(x = annotate_point, y = annotate_y, xend = annotate_point + : All aesthetics have length 1, but the data has 183 rows.
-ℹ Please consider using `annotate()` or provide this layer with data containing
-  a single row.</code></pre>
-</div>
-<div class="cell-output cell-output-stderr">
-<pre><code>Warning in geom_point(aes(x = combined_apr, y = combined_apr_y), color = "navy", : All aesthetics have length 1, but the data has 183 rows.
-ℹ Please consider using `annotate()` or provide this layer with data containing
-  a single row.</code></pre>
-</div>
-<div class="cell-output cell-output-stderr">
-<pre><code>Warning in geom_segment(aes(x = combined_apr, y = combined_apr_y, xend = combined_apr + : All aesthetics have length 1, but the data has 183 rows.
-ℹ Please consider using `annotate()` or provide this layer with data containing
-  a single row.</code></pre>
-</div>
-<div class="cell-output cell-output-stderr">
-<pre><code>Warning: Removed 6 rows containing missing values or values outside the scale range
-(`geom_line()`).</code></pre>
+<pre><code>Warning: The `size` argument of `element_line()` is deprecated as of ggplot2 3.4.0.
+ℹ Please use the `linewidth` argument instead.</code></pre>
 </div>
 <div class="cell-output-display">
-<div>
+<div class="quarto-figure quarto-figure-center">
 <figure class="figure">
-<p><img src="Tomato_Poster_Covid_files/figure-html/Time%20Series%20Line%20Chart%20(Dormitory%20vs%20Community)-1.png" class="img-fluid figure-img" width="672"></p>
-</figure>
-</div>
-</div>
-<div class="sourceCode cell-code" id="cb34"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb34-1"><a href="#cb34-1" aria-hidden="true" tabindex="-1"></a>p2</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<div class="cell-output cell-output-stderr">
-<pre><code>Warning: Removed 6 rows containing missing values or values outside the scale range
-(`geom_line()`).</code></pre>
-</div>
-<div class="cell-output-display">
-<div>
-<figure class="figure">
-<p><img src="Tomato_Poster_Covid_files/figure-html/Time%20Series%20Line%20Chart%20(Dormitory%20vs%20Community)-2.png" class="img-fluid figure-img" width="672"></p>
+<p><img src="Tomato_Poster_Covid_files/figure-html/Display%20Z-score%20Normalized%20Density%20Plot-1.png" class="img-fluid quarto-figure quarto-figure-center figure-img" width="3300"></p>
 </figure>
 </div>
 </div>
 </div>
+<div class="notes">
+<p><strong>Notes on Major Events:</strong></p>
+<p>1. Apr 2020: Dormitory outbreak, strict quarantine, mass testing → rapid decline.<br>
+2. Jul 2020: Mass testing ramp-up → backlog of asymptomatic cases.<br>
+3. Aug 2020: Dorms cleared, strict protocols → drop in rates.<br>
+4. Sep 2021: Spike from easing restrictions, breakthrough infections in vulnerable.<br>
+5. Oct 2021: Restrictions reinstated → fall in cases.</p>
+</div>
+<section id="saving-z-score-plot-with-captions" class="level2">
+<h2 class="anchored" data-anchor-id="saving-z-score-plot-with-captions">Saving Z-score plot with Captions</h2>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb36"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb36-1"><a href="#cb36-1" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(scales)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<div class="cell-output cell-output-stderr">
-<pre><code>
-Attaching package: 'scales'</code></pre>
+<div class="sourceCode cell-code" id="cb17"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a><span class="co">#|label: Saving Z-score Normalized Density Plot</span></span>
+<span id="cb17-2"><a href="#cb17-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb17-3"><a href="#cb17-3" aria-hidden="true" tabindex="-1"></a>caption_text <span class="ot">&lt;-</span> <span class="fu">paste</span>(</span>
+<span id="cb17-4"><a href="#cb17-4" aria-hidden="true" tabindex="-1"></a>  <span class="st">"Notes:"</span>,</span>
+<span id="cb17-5"><a href="#cb17-5" aria-hidden="true" tabindex="-1"></a>  <span class="st">"1. Apr 2020: Dormitory outbreak, strict quarantine, mass testing → rapid decline."</span>,</span>
+<span id="cb17-6"><a href="#cb17-6" aria-hidden="true" tabindex="-1"></a>  <span class="st">"2. Jul 2020: Mass testing ramp-up → backlog of asymptomatic cases."</span>,</span>
+<span id="cb17-7"><a href="#cb17-7" aria-hidden="true" tabindex="-1"></a>  <span class="st">"3. Aug 2020: Dorms cleared, strict protocols → drop in rates."</span>,</span>
+<span id="cb17-8"><a href="#cb17-8" aria-hidden="true" tabindex="-1"></a>  <span class="st">"4. Sep 2021: Spike from easing restrictions, breakthrough infections in vulnerable."</span>,</span>
+<span id="cb17-9"><a href="#cb17-9" aria-hidden="true" tabindex="-1"></a>  <span class="st">"5. Oct 2021: Restrictions reinstated → fall in cases."</span>,</span>
+<span id="cb17-10"><a href="#cb17-10" aria-hidden="true" tabindex="-1"></a>  <span class="at">sep =</span> <span class="st">"</span><span class="sc">\n</span><span class="st">"</span></span>
+<span id="cb17-11"><a href="#cb17-11" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb17-12"><a href="#cb17-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb17-13"><a href="#cb17-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb17-14"><a href="#cb17-14" aria-hidden="true" tabindex="-1"></a><span class="co"># Add caption back for saving</span></span>
+<span id="cb17-15"><a href="#cb17-15" aria-hidden="true" tabindex="-1"></a>z_score_plot_annotated <span class="ot">&lt;-</span> z_score_plot <span class="sc">+</span></span>
+<span id="cb17-16"><a href="#cb17-16" aria-hidden="true" tabindex="-1"></a>  <span class="fu">labs</span>(<span class="at">caption =</span> caption_text)</span>
+<span id="cb17-17"><a href="#cb17-17" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb17-18"><a href="#cb17-18" aria-hidden="true" tabindex="-1"></a><span class="fu">ggsave</span>(<span class="st">"covid_density_zscore_scaled.png"</span>, <span class="at">plot =</span> z_score_plot_annotated,</span>
+<span id="cb17-19"><a href="#cb17-19" aria-hidden="true" tabindex="-1"></a>       <span class="at">width =</span> <span class="dv">11</span>, <span class="at">height =</span> <span class="fl">6.5</span>, <span class="at">dpi =</span> <span class="dv">300</span>,</span>
+<span id="cb17-20"><a href="#cb17-20" aria-hidden="true" tabindex="-1"></a>       <span class="at">device =</span> <span class="st">"png"</span>, <span class="at">bg =</span> <span class="st">"white"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
-<div class="cell-output cell-output-stderr">
-<pre><code>The following object is masked from 'package:purrr':
-
-    discard</code></pre>
-</div>
-<div class="cell-output cell-output-stderr">
-<pre><code>The following object is masked from 'package:readr':
-
-    col_factor</code></pre>
-</div>
-<div class="sourceCode cell-code" id="cb40"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb40-1"><a href="#cb40-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Prepare monthly summary</span></span>
-<span id="cb40-2"><a href="#cb40-2" aria-hidden="true" tabindex="-1"></a>monthly_cases <span class="ot">&lt;-</span> covid_clean <span class="sc">%&gt;%</span></span>
-<span id="cb40-3"><a href="#cb40-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(Date <span class="sc">&gt;=</span> <span class="fu">as.Date</span>(<span class="st">"2020-04-20"</span>) <span class="sc">&amp;</span> Date <span class="sc">&lt;=</span> <span class="fu">as.Date</span>(<span class="st">"2020-09-07"</span>)) <span class="sc">%&gt;%</span></span>
-<span id="cb40-4"><a href="#cb40-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">Month =</span> <span class="fu">floor_date</span>(Date, <span class="st">"month"</span>)) <span class="sc">%&gt;%</span></span>
-<span id="cb40-5"><a href="#cb40-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">group_by</span>(Month) <span class="sc">%&gt;%</span></span>
-<span id="cb40-6"><a href="#cb40-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">summarise</span>(</span>
-<span id="cb40-7"><a href="#cb40-7" aria-hidden="true" tabindex="-1"></a>    <span class="at">Dormitory =</span> <span class="fu">sum</span>(<span class="st">`</span><span class="at">Local cases residing in dorms MOH report</span><span class="st">`</span>, <span class="at">na.rm =</span> <span class="cn">TRUE</span>),</span>
-<span id="cb40-8"><a href="#cb40-8" aria-hidden="true" tabindex="-1"></a>    <span class="at">Community =</span> <span class="fu">sum</span>(<span class="st">`</span><span class="at">Local cases not residing in doms MOH report</span><span class="st">`</span>, <span class="at">na.rm =</span> <span class="cn">TRUE</span>)</span>
-<span id="cb40-9"><a href="#cb40-9" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">%&gt;%</span></span>
-<span id="cb40-10"><a href="#cb40-10" aria-hidden="true" tabindex="-1"></a>  <span class="fu">pivot_longer</span>(<span class="at">cols =</span> <span class="fu">c</span>(Dormitory, Community), <span class="at">names_to =</span> <span class="st">"Group"</span>, <span class="at">values_to =</span> <span class="st">"Cases"</span>) <span class="sc">%&gt;%</span></span>
-<span id="cb40-11"><a href="#cb40-11" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">Month =</span> <span class="fu">factor</span>(<span class="fu">format</span>(Month, <span class="st">"%b %Y"</span>), <span class="at">levels =</span> <span class="fu">format</span>(<span class="fu">seq.Date</span>(<span class="fu">as.Date</span>(<span class="st">"2020-04-01"</span>), <span class="fu">as.Date</span>(<span class="st">"2020-09-01"</span>), <span class="at">by =</span> <span class="st">"month"</span>), <span class="st">"%b %Y"</span>)))</span>
-<span id="cb40-12"><a href="#cb40-12" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb40-13"><a href="#cb40-13" aria-hidden="true" tabindex="-1"></a><span class="co"># Plot</span></span>
-<span id="cb40-14"><a href="#cb40-14" aria-hidden="true" tabindex="-1"></a>monthly_bar <span class="ot">&lt;-</span> <span class="fu">ggplot</span>(monthly_cases, <span class="fu">aes</span>(<span class="at">x =</span> Month, <span class="at">y =</span> Cases, <span class="at">fill =</span> Group)) <span class="sc">+</span></span>
-<span id="cb40-15"><a href="#cb40-15" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_col</span>(<span class="at">position =</span> <span class="fu">position_dodge</span>(<span class="at">width =</span> <span class="fl">0.9</span>)) <span class="sc">+</span></span>
-<span id="cb40-16"><a href="#cb40-16" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_text</span>(</span>
-<span id="cb40-17"><a href="#cb40-17" aria-hidden="true" tabindex="-1"></a>    <span class="fu">aes</span>(<span class="at">label =</span> <span class="fu">comma</span>(Cases)),</span>
-<span id="cb40-18"><a href="#cb40-18" aria-hidden="true" tabindex="-1"></a>    <span class="at">position =</span> <span class="fu">position_dodge</span>(<span class="at">width =</span> <span class="fl">0.9</span>),</span>
-<span id="cb40-19"><a href="#cb40-19" aria-hidden="true" tabindex="-1"></a>    <span class="at">vjust =</span> <span class="sc">-</span><span class="fl">0.3</span>,</span>
-<span id="cb40-20"><a href="#cb40-20" aria-hidden="true" tabindex="-1"></a>    <span class="at">size =</span> <span class="fl">3.5</span></span>
-<span id="cb40-21"><a href="#cb40-21" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">+</span></span>
-<span id="cb40-22"><a href="#cb40-22" aria-hidden="true" tabindex="-1"></a>  <span class="fu">scale_fill_manual</span>(<span class="at">values =</span> <span class="fu">c</span>(<span class="st">"Dormitory"</span> <span class="ot">=</span> <span class="st">"steelblue"</span>, <span class="st">"Community"</span> <span class="ot">=</span> <span class="st">"darkred"</span>)) <span class="sc">+</span></span>
-<span id="cb40-23"><a href="#cb40-23" aria-hidden="true" tabindex="-1"></a>  <span class="fu">labs</span>(</span>
-<span id="cb40-24"><a href="#cb40-24" aria-hidden="true" tabindex="-1"></a>    <span class="at">title =</span> <span class="st">"Monthly COVID-19 Cases by Group"</span>,</span>
-<span id="cb40-25"><a href="#cb40-25" aria-hidden="true" tabindex="-1"></a>    <span class="at">subtitle =</span> <span class="st">"Summarised total cases in dormitories vs community (Apr–Sep 2020)"</span>,</span>
-<span id="cb40-26"><a href="#cb40-26" aria-hidden="true" tabindex="-1"></a>    <span class="at">x =</span> <span class="st">"Month"</span>, <span class="at">y =</span> <span class="st">"Total Cases"</span>, <span class="at">fill =</span> <span class="st">"Case Group"</span></span>
-<span id="cb40-27"><a href="#cb40-27" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">+</span></span>
-<span id="cb40-28"><a href="#cb40-28" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme_minimal</span>() <span class="sc">+</span></span>
-<span id="cb40-29"><a href="#cb40-29" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme</span>(<span class="at">axis.text.x =</span> <span class="fu">element_text</span>(<span class="at">angle =</span> <span class="dv">45</span>, <span class="at">hjust =</span> <span class="dv">1</span>))</span>
-<span id="cb40-30"><a href="#cb40-30" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb40-31"><a href="#cb40-31" aria-hidden="true" tabindex="-1"></a><span class="co"># Save and view</span></span>
-<span id="cb40-32"><a href="#cb40-32" aria-hidden="true" tabindex="-1"></a><span class="fu">ggsave</span>(<span class="st">"monthly_covid_cases_grouped.png"</span>, monthly_bar, <span class="at">width =</span> <span class="dv">10</span>, <span class="at">height =</span> <span class="dv">6</span>)</span>
-<span id="cb40-33"><a href="#cb40-33" aria-hidden="true" tabindex="-1"></a>monthly_bar</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<div class="cell-output-display">
-<div>
-<figure class="figure">
-<p><img src="Tomato_Poster_Covid_files/figure-html/Monthly%20cases%20bar%20plot%20(Dormitory%20vs%20Community)-1.png" class="img-fluid figure-img" width="672"></p>
-</figure>
-</div>
-</div>
-</div>
-<div class="cell">
-<div class="sourceCode cell-code" id="cb41"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb41-1"><a href="#cb41-1" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(tidyverse)</span>
-<span id="cb41-2"><a href="#cb41-2" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(lubridate)</span>
-<span id="cb41-3"><a href="#cb41-3" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(scales)</span>
-<span id="cb41-4"><a href="#cb41-4" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb41-5"><a href="#cb41-5" aria-hidden="true" tabindex="-1"></a><span class="co"># 1) Load &amp; filter Apr–Sep 2020</span></span>
-<span id="cb41-6"><a href="#cb41-6" aria-hidden="true" tabindex="-1"></a>df <span class="ot">&lt;-</span> <span class="fu">read_csv</span>(<span class="st">"covid19_sg.csv"</span>, <span class="at">col_types =</span> <span class="fu">cols</span>(</span>
-<span id="cb41-7"><a href="#cb41-7" aria-hidden="true" tabindex="-1"></a>  <span class="at">Date =</span> <span class="fu">col_date</span>(),</span>
-<span id="cb41-8"><a href="#cb41-8" aria-hidden="true" tabindex="-1"></a>  <span class="st">`</span><span class="at">Local cases residing in dorms MOH report</span><span class="st">`</span>    <span class="ot">=</span> <span class="fu">col_double</span>(),</span>
-<span id="cb41-9"><a href="#cb41-9" aria-hidden="true" tabindex="-1"></a>  <span class="st">`</span><span class="at">Local cases not residing in doms MOH report</span><span class="st">`</span> <span class="ot">=</span> <span class="fu">col_double</span>(),</span>
-<span id="cb41-10"><a href="#cb41-10" aria-hidden="true" tabindex="-1"></a>  <span class="at">Phase =</span> <span class="fu">col_character</span>()</span>
-<span id="cb41-11"><a href="#cb41-11" aria-hidden="true" tabindex="-1"></a>)) <span class="sc">%&gt;%</span></span>
-<span id="cb41-12"><a href="#cb41-12" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(Date <span class="sc">&gt;=</span> <span class="fu">ymd</span>(<span class="st">"2020-04-01"</span>), Date <span class="sc">&lt;=</span> <span class="fu">ymd</span>(<span class="st">"2020-09-30"</span>)) <span class="sc">%&gt;%</span></span>
-<span id="cb41-13"><a href="#cb41-13" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(</span>
-<span id="cb41-14"><a href="#cb41-14" aria-hidden="true" tabindex="-1"></a>    <span class="at">dorm  =</span> <span class="st">`</span><span class="at">Local cases residing in dorms MOH report</span><span class="st">`</span>,</span>
-<span id="cb41-15"><a href="#cb41-15" aria-hidden="true" tabindex="-1"></a>    <span class="at">comm  =</span> <span class="st">`</span><span class="at">Local cases not residing in doms MOH report</span><span class="st">`</span>,</span>
-<span id="cb41-16"><a href="#cb41-16" aria-hidden="true" tabindex="-1"></a>    <span class="at">Month =</span> <span class="fu">floor_date</span>(Date, <span class="st">"month"</span>)</span>
-<span id="cb41-17"><a href="#cb41-17" aria-hidden="true" tabindex="-1"></a>  )</span>
-<span id="cb41-18"><a href="#cb41-18" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb41-19"><a href="#cb41-19" aria-hidden="true" tabindex="-1"></a><span class="co"># 2) Summarise + build labels</span></span>
-<span id="cb41-20"><a href="#cb41-20" aria-hidden="true" tabindex="-1"></a>monthly <span class="ot">&lt;-</span> df <span class="sc">%&gt;%</span></span>
-<span id="cb41-21"><a href="#cb41-21" aria-hidden="true" tabindex="-1"></a>  <span class="fu">group_by</span>(Month) <span class="sc">%&gt;%</span></span>
-<span id="cb41-22"><a href="#cb41-22" aria-hidden="true" tabindex="-1"></a>  <span class="fu">summarise</span>(</span>
-<span id="cb41-23"><a href="#cb41-23" aria-hidden="true" tabindex="-1"></a>    <span class="at">dorm  =</span> <span class="fu">sum</span>(dorm, <span class="at">na.rm =</span> <span class="cn">TRUE</span>),</span>
-<span id="cb41-24"><a href="#cb41-24" aria-hidden="true" tabindex="-1"></a>    <span class="at">comm  =</span> <span class="fu">sum</span>(comm, <span class="at">na.rm =</span> <span class="cn">TRUE</span>),</span>
-<span id="cb41-25"><a href="#cb41-25" aria-hidden="true" tabindex="-1"></a>    <span class="at">Phase =</span> Phase <span class="sc">%&gt;%</span> <span class="fu">table</span>() <span class="sc">%&gt;%</span> <span class="fu">which.max</span>() <span class="sc">%&gt;%</span> <span class="fu">names</span>()</span>
-<span id="cb41-26"><a href="#cb41-26" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">%&gt;%</span></span>
-<span id="cb41-27"><a href="#cb41-27" aria-hidden="true" tabindex="-1"></a>  <span class="fu">ungroup</span>() <span class="sc">%&gt;%</span></span>
-<span id="cb41-28"><a href="#cb41-28" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(</span>
-<span id="cb41-29"><a href="#cb41-29" aria-hidden="true" tabindex="-1"></a>    <span class="at">label =</span> <span class="fu">paste0</span>(<span class="fu">format</span>(Month, <span class="st">"%b %Y"</span>), <span class="st">"</span><span class="sc">\n</span><span class="st">("</span>, Phase, <span class="st">")"</span>)</span>
-<span id="cb41-30"><a href="#cb41-30" aria-hidden="true" tabindex="-1"></a>  )</span>
-<span id="cb41-31"><a href="#cb41-31" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb41-32"><a href="#cb41-32" aria-hidden="true" tabindex="-1"></a><span class="co"># 3) Pivot longer for ggplot</span></span>
-<span id="cb41-33"><a href="#cb41-33" aria-hidden="true" tabindex="-1"></a>monthly_long <span class="ot">&lt;-</span> monthly <span class="sc">%&gt;%</span></span>
-<span id="cb41-34"><a href="#cb41-34" aria-hidden="true" tabindex="-1"></a>  <span class="fu">select</span>(label, dorm, comm) <span class="sc">%&gt;%</span></span>
-<span id="cb41-35"><a href="#cb41-35" aria-hidden="true" tabindex="-1"></a>  <span class="fu">pivot_longer</span>(<span class="fu">c</span>(dorm, comm),</span>
-<span id="cb41-36"><a href="#cb41-36" aria-hidden="true" tabindex="-1"></a>               <span class="at">names_to  =</span> <span class="st">"Type"</span>,</span>
-<span id="cb41-37"><a href="#cb41-37" aria-hidden="true" tabindex="-1"></a>               <span class="at">values_to =</span> <span class="st">"Count"</span>) <span class="sc">%&gt;%</span></span>
-<span id="cb41-38"><a href="#cb41-38" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(</span>
-<span id="cb41-39"><a href="#cb41-39" aria-hidden="true" tabindex="-1"></a>    <span class="at">Type =</span> <span class="fu">recode</span>(Type,</span>
-<span id="cb41-40"><a href="#cb41-40" aria-hidden="true" tabindex="-1"></a>                  <span class="at">dorm =</span> <span class="st">"Dormitory cases"</span>,</span>
-<span id="cb41-41"><a href="#cb41-41" aria-hidden="true" tabindex="-1"></a>                  <span class="at">comm =</span> <span class="st">"Community cases"</span>),</span>
-<span id="cb41-42"><a href="#cb41-42" aria-hidden="true" tabindex="-1"></a>    <span class="at">label =</span> <span class="fu">factor</span>(label, <span class="at">levels =</span> monthly<span class="sc">$</span>label)  <span class="co"># preserve order</span></span>
-<span id="cb41-43"><a href="#cb41-43" aria-hidden="true" tabindex="-1"></a>  )</span>
-<span id="cb41-44"><a href="#cb41-44" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb41-45"><a href="#cb41-45" aria-hidden="true" tabindex="-1"></a><span class="co"># 4) Plot</span></span>
-<span id="cb41-46"><a href="#cb41-46" aria-hidden="true" tabindex="-1"></a>month_phase_plot <span class="ot">&lt;-</span> <span class="fu">ggplot</span>(monthly_long, <span class="fu">aes</span>(<span class="at">x =</span> label, <span class="at">y =</span> Count, <span class="at">fill =</span> Type)) <span class="sc">+</span></span>
-<span id="cb41-47"><a href="#cb41-47" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_col</span>(<span class="at">position =</span> <span class="fu">position_dodge</span>(<span class="at">width =</span> <span class="fl">0.7</span>),</span>
-<span id="cb41-48"><a href="#cb41-48" aria-hidden="true" tabindex="-1"></a>           <span class="at">width    =</span> <span class="fl">0.6</span>,</span>
-<span id="cb41-49"><a href="#cb41-49" aria-hidden="true" tabindex="-1"></a>           <span class="at">color    =</span> <span class="st">"grey20"</span>) <span class="sc">+</span></span>
-<span id="cb41-50"><a href="#cb41-50" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_text</span>(<span class="fu">aes</span>(<span class="at">label =</span> <span class="fu">comma</span>(Count)),</span>
-<span id="cb41-51"><a href="#cb41-51" aria-hidden="true" tabindex="-1"></a>            <span class="at">position =</span> <span class="fu">position_dodge</span>(<span class="at">width =</span> <span class="fl">0.7</span>),</span>
-<span id="cb41-52"><a href="#cb41-52" aria-hidden="true" tabindex="-1"></a>            <span class="at">vjust    =</span> <span class="sc">-</span><span class="fl">0.5</span>,</span>
-<span id="cb41-53"><a href="#cb41-53" aria-hidden="true" tabindex="-1"></a>            <span class="at">size     =</span> <span class="dv">3</span>) <span class="sc">+</span></span>
-<span id="cb41-54"><a href="#cb41-54" aria-hidden="true" tabindex="-1"></a>  <span class="fu">scale_fill_manual</span>(</span>
-<span id="cb41-55"><a href="#cb41-55" aria-hidden="true" tabindex="-1"></a>    <span class="at">values =</span> <span class="fu">c</span>(<span class="st">"Community cases"</span> <span class="ot">=</span> <span class="st">"#ff7f0e"</span>,</span>
-<span id="cb41-56"><a href="#cb41-56" aria-hidden="true" tabindex="-1"></a>               <span class="st">"Dormitory cases"</span> <span class="ot">=</span> <span class="st">"#1f77b4"</span>)</span>
-<span id="cb41-57"><a href="#cb41-57" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">+</span></span>
-<span id="cb41-58"><a href="#cb41-58" aria-hidden="true" tabindex="-1"></a>  <span class="fu">scale_y_continuous</span>(</span>
-<span id="cb41-59"><a href="#cb41-59" aria-hidden="true" tabindex="-1"></a>    <span class="at">expand =</span> <span class="fu">expansion</span>(<span class="at">mult =</span> <span class="fu">c</span>(<span class="dv">0</span>, <span class="fl">0.05</span>))</span>
-<span id="cb41-60"><a href="#cb41-60" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">+</span></span>
-<span id="cb41-61"><a href="#cb41-61" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme_light</span>(<span class="at">base_size =</span> <span class="dv">12</span>) <span class="sc">+</span></span>
-<span id="cb41-62"><a href="#cb41-62" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme</span>(</span>
-<span id="cb41-63"><a href="#cb41-63" aria-hidden="true" tabindex="-1"></a>    <span class="at">axis.text.x       =</span> <span class="fu">element_text</span>(<span class="at">angle =</span> <span class="dv">45</span>, <span class="at">hjust =</span> <span class="dv">1</span>),</span>
-<span id="cb41-64"><a href="#cb41-64" aria-hidden="true" tabindex="-1"></a>    <span class="at">panel.grid.major.x =</span> <span class="fu">element_blank</span>(),</span>
-<span id="cb41-65"><a href="#cb41-65" aria-hidden="true" tabindex="-1"></a>    <span class="at">panel.grid.minor   =</span> <span class="fu">element_blank</span>(),</span>
-<span id="cb41-66"><a href="#cb41-66" aria-hidden="true" tabindex="-1"></a>    <span class="at">legend.position    =</span> <span class="st">"top"</span>,</span>
-<span id="cb41-67"><a href="#cb41-67" aria-hidden="true" tabindex="-1"></a>    <span class="at">legend.title       =</span> <span class="fu">element_blank</span>(),</span>
-<span id="cb41-68"><a href="#cb41-68" aria-hidden="true" tabindex="-1"></a>    <span class="at">plot.title         =</span> <span class="fu">element_text</span>(<span class="at">face =</span> <span class="st">"bold"</span>, <span class="at">hjust =</span> <span class="fl">0.5</span>, <span class="at">size =</span> <span class="dv">14</span>)</span>
-<span id="cb41-69"><a href="#cb41-69" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">+</span></span>
-<span id="cb41-70"><a href="#cb41-70" aria-hidden="true" tabindex="-1"></a>  <span class="fu">labs</span>(</span>
-<span id="cb41-71"><a href="#cb41-71" aria-hidden="true" tabindex="-1"></a>    <span class="at">x     =</span> <span class="st">"Month (Phase)"</span>,</span>
-<span id="cb41-72"><a href="#cb41-72" aria-hidden="true" tabindex="-1"></a>    <span class="at">y     =</span> <span class="st">"Total Cases"</span>,</span>
-<span id="cb41-73"><a href="#cb41-73" aria-hidden="true" tabindex="-1"></a>    <span class="at">title =</span> <span class="st">"COVID-19 Cases Apr–Sep 2020 by Month &amp; Phase"</span></span>
-<span id="cb41-74"><a href="#cb41-74" aria-hidden="true" tabindex="-1"></a>  )</span>
-<span id="cb41-75"><a href="#cb41-75" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb41-76"><a href="#cb41-76" aria-hidden="true" tabindex="-1"></a><span class="fu">ggsave</span>(<span class="st">"covid_cases_by_month_phase.png"</span>, <span class="at">plot =</span> month_phase_plot,</span>
-<span id="cb41-77"><a href="#cb41-77" aria-hidden="true" tabindex="-1"></a>       <span class="at">width =</span> <span class="dv">10</span>, <span class="at">height =</span> <span class="dv">6</span>, <span class="at">dpi =</span> <span class="dv">300</span>,</span>
-<span id="cb41-78"><a href="#cb41-78" aria-hidden="true" tabindex="-1"></a>       <span class="at">device =</span> <span class="st">"png"</span>, <span class="at">bg =</span> <span class="st">"white"</span>)</span>
-<span id="cb41-79"><a href="#cb41-79" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb41-80"><a href="#cb41-80" aria-hidden="true" tabindex="-1"></a>month_phase_plot</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<div class="cell-output-display">
-<div>
-<figure class="figure">
-<p><img src="Tomato_Poster_Covid_files/figure-html/unnamed-chunk-5-1.png" class="img-fluid figure-img" width="672"></p>
-</figure>
-</div>
-</div>
-</div>
-<div class="cell">
-<div class="sourceCode cell-code" id="cb42"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb42-1"><a href="#cb42-1" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(tidyr)</span>
-<span id="cb42-2"><a href="#cb42-2" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(ggplot2)</span>
-<span id="cb42-3"><a href="#cb42-3" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb42-4"><a href="#cb42-4" aria-hidden="true" tabindex="-1"></a><span class="co"># Prepare long-form data</span></span>
-<span id="cb42-5"><a href="#cb42-5" aria-hidden="true" tabindex="-1"></a>covid_long <span class="ot">&lt;-</span> covid_clean <span class="sc">%&gt;%</span></span>
-<span id="cb42-6"><a href="#cb42-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">select</span>(Date, dorm_cases_density_rate, community_cases_density_rate) <span class="sc">%&gt;%</span></span>
-<span id="cb42-7"><a href="#cb42-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">pivot_longer</span>(<span class="at">cols =</span> <span class="sc">-</span>Date, <span class="at">names_to =</span> <span class="st">"Group"</span>, <span class="at">values_to =</span> <span class="st">"Rate"</span>) <span class="sc">%&gt;%</span></span>
-<span id="cb42-8"><a href="#cb42-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(</span>
-<span id="cb42-9"><a href="#cb42-9" aria-hidden="true" tabindex="-1"></a>    <span class="at">Date =</span> <span class="fu">as.Date</span>(Date),</span>
-<span id="cb42-10"><a href="#cb42-10" aria-hidden="true" tabindex="-1"></a>    <span class="at">Group =</span> <span class="fu">recode</span>(Group,</span>
-<span id="cb42-11"><a href="#cb42-11" aria-hidden="true" tabindex="-1"></a>                   <span class="st">"dorm_cases_density_rate"</span> <span class="ot">=</span> <span class="st">"Dormitories"</span>,</span>
-<span id="cb42-12"><a href="#cb42-12" aria-hidden="true" tabindex="-1"></a>                   <span class="st">"community_cases_density_rate"</span> <span class="ot">=</span> <span class="st">"Community"</span>)</span>
-<span id="cb42-13"><a href="#cb42-13" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">%&gt;%</span></span>
-<span id="cb42-14"><a href="#cb42-14" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(Date <span class="sc">&gt;=</span> <span class="fu">as.Date</span>(<span class="st">"2020-04-01"</span>) <span class="sc">&amp;</span> Date <span class="sc">&lt;=</span> <span class="fu">as.Date</span>(<span class="st">"2020-09-30"</span>))</span>
-<span id="cb42-15"><a href="#cb42-15" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb42-16"><a href="#cb42-16" aria-hidden="true" tabindex="-1"></a><span class="co"># Find dormitory peak</span></span>
-<span id="cb42-17"><a href="#cb42-17" aria-hidden="true" tabindex="-1"></a>peak_dorm <span class="ot">&lt;-</span> covid_long <span class="sc">%&gt;%</span></span>
-<span id="cb42-18"><a href="#cb42-18" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(Group <span class="sc">==</span> <span class="st">"Dormitories"</span>) <span class="sc">%&gt;%</span></span>
-<span id="cb42-19"><a href="#cb42-19" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(Rate <span class="sc">==</span> <span class="fu">max</span>(Rate, <span class="at">na.rm =</span> <span class="cn">TRUE</span>)) <span class="sc">%&gt;%</span></span>
-<span id="cb42-20"><a href="#cb42-20" aria-hidden="true" tabindex="-1"></a>  <span class="fu">slice</span>(<span class="dv">1</span>)</span>
-<span id="cb42-21"><a href="#cb42-21" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb42-22"><a href="#cb42-22" aria-hidden="true" tabindex="-1"></a>peak_date <span class="ot">&lt;-</span> peak_dorm<span class="sc">$</span>Date</span>
-<span id="cb42-23"><a href="#cb42-23" aria-hidden="true" tabindex="-1"></a>peak_rate <span class="ot">&lt;-</span> peak_dorm<span class="sc">$</span>Rate</span>
-<span id="cb42-24"><a href="#cb42-24" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb42-25"><a href="#cb42-25" aria-hidden="true" tabindex="-1"></a><span class="co"># Plot</span></span>
-<span id="cb42-26"><a href="#cb42-26" aria-hidden="true" tabindex="-1"></a>density_plot <span class="ot">&lt;-</span> <span class="fu">ggplot</span>(covid_long, <span class="fu">aes</span>(<span class="at">x =</span> Date, <span class="at">y =</span> Rate, <span class="at">color =</span> Group)) <span class="sc">+</span></span>
-<span id="cb42-27"><a href="#cb42-27" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_line</span>(<span class="at">size =</span> <span class="fl">0.8</span>) <span class="sc">+</span></span>
-<span id="cb42-28"><a href="#cb42-28" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb42-29"><a href="#cb42-29" aria-hidden="true" tabindex="-1"></a>  <span class="co"># LOESS smoothing for Dormitories only</span></span>
-<span id="cb42-30"><a href="#cb42-30" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_smooth</span>(</span>
-<span id="cb42-31"><a href="#cb42-31" aria-hidden="true" tabindex="-1"></a>    <span class="at">data =</span> covid_long <span class="sc">%&gt;%</span> <span class="fu">filter</span>(Group <span class="sc">==</span> <span class="st">"Dormitories"</span>),</span>
-<span id="cb42-32"><a href="#cb42-32" aria-hidden="true" tabindex="-1"></a>    <span class="fu">aes</span>(<span class="at">x =</span> Date, <span class="at">y =</span> Rate),</span>
-<span id="cb42-33"><a href="#cb42-33" aria-hidden="true" tabindex="-1"></a>    <span class="at">se =</span> <span class="cn">FALSE</span>, <span class="at">method =</span> <span class="st">"loess"</span>, <span class="at">span =</span> <span class="fl">0.2</span>,</span>
-<span id="cb42-34"><a href="#cb42-34" aria-hidden="true" tabindex="-1"></a>    <span class="at">color =</span> <span class="st">"steelblue"</span>, <span class="at">size =</span> <span class="dv">1</span></span>
-<span id="cb42-35"><a href="#cb42-35" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">+</span></span>
-<span id="cb42-36"><a href="#cb42-36" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb42-37"><a href="#cb42-37" aria-hidden="true" tabindex="-1"></a>  <span class="co"># Label the LOESS line</span></span>
-<span id="cb42-38"><a href="#cb42-38" aria-hidden="true" tabindex="-1"></a>  <span class="fu">annotate</span>(<span class="st">"text"</span>, <span class="at">x =</span> <span class="fu">as.Date</span>(<span class="st">"2020-08-15"</span>), <span class="at">y =</span> <span class="dv">18</span>,</span>
-<span id="cb42-39"><a href="#cb42-39" aria-hidden="true" tabindex="-1"></a>           <span class="at">label =</span> <span class="st">"LOESS (Dormitories)"</span>, <span class="at">color =</span> <span class="st">"steelblue"</span>, <span class="at">size =</span> <span class="fl">3.5</span>, <span class="at">hjust =</span> <span class="dv">0</span>) <span class="sc">+</span></span>
-<span id="cb42-40"><a href="#cb42-40" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb42-41"><a href="#cb42-41" aria-hidden="true" tabindex="-1"></a>  <span class="co"># Peak dorm point and label</span></span>
-<span id="cb42-42"><a href="#cb42-42" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_point</span>(<span class="at">data =</span> peak_dorm, <span class="fu">aes</span>(<span class="at">x =</span> Date, <span class="at">y =</span> Rate), <span class="at">color =</span> <span class="st">"steelblue"</span>, <span class="at">size =</span> <span class="fl">2.5</span>) <span class="sc">+</span></span>
-<span id="cb42-43"><a href="#cb42-43" aria-hidden="true" tabindex="-1"></a>  <span class="fu">annotate</span>(<span class="st">"text"</span>,</span>
-<span id="cb42-44"><a href="#cb42-44" aria-hidden="true" tabindex="-1"></a>           <span class="at">x =</span> peak_date <span class="sc">+</span> <span class="dv">5</span>,</span>
-<span id="cb42-45"><a href="#cb42-45" aria-hidden="true" tabindex="-1"></a>           <span class="at">y =</span> peak_rate,</span>
-<span id="cb42-46"><a href="#cb42-46" aria-hidden="true" tabindex="-1"></a>           <span class="at">label =</span> <span class="fu">paste0</span>(<span class="st">"Peak: "</span>, <span class="fu">round</span>(peak_rate, <span class="dv">1</span>), <span class="st">"</span><span class="sc">\n</span><span class="st">cases/100k/km²"</span>),</span>
-<span id="cb42-47"><a href="#cb42-47" aria-hidden="true" tabindex="-1"></a>           <span class="at">hjust =</span> <span class="dv">0</span>,</span>
-<span id="cb42-48"><a href="#cb42-48" aria-hidden="true" tabindex="-1"></a>           <span class="at">size =</span> <span class="fl">3.5</span>,</span>
-<span id="cb42-49"><a href="#cb42-49" aria-hidden="true" tabindex="-1"></a>           <span class="at">color =</span> <span class="st">"steelblue"</span>) <span class="sc">+</span></span>
-<span id="cb42-50"><a href="#cb42-50" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb42-51"><a href="#cb42-51" aria-hidden="true" tabindex="-1"></a>  <span class="co"># Color scale</span></span>
-<span id="cb42-52"><a href="#cb42-52" aria-hidden="true" tabindex="-1"></a>  <span class="fu">scale_color_manual</span>(<span class="at">values =</span> <span class="fu">c</span>(<span class="st">"Dormitories"</span> <span class="ot">=</span> <span class="st">"steelblue"</span>, <span class="st">"Community"</span> <span class="ot">=</span> <span class="st">"firebrick"</span>)) <span class="sc">+</span></span>
-<span id="cb42-53"><a href="#cb42-53" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb42-54"><a href="#cb42-54" aria-hidden="true" tabindex="-1"></a>  <span class="co"># Axis setup</span></span>
-<span id="cb42-55"><a href="#cb42-55" aria-hidden="true" tabindex="-1"></a>  <span class="fu">scale_x_date</span>(</span>
-<span id="cb42-56"><a href="#cb42-56" aria-hidden="true" tabindex="-1"></a>    <span class="at">breaks =</span> <span class="fu">seq</span>(<span class="fu">as.Date</span>(<span class="st">"2020-04-01"</span>), <span class="fu">as.Date</span>(<span class="st">"2020-09-30"</span>), <span class="at">by =</span> <span class="st">"1 month"</span>),</span>
-<span id="cb42-57"><a href="#cb42-57" aria-hidden="true" tabindex="-1"></a>    <span class="at">date_labels =</span> <span class="st">"%b"</span>,</span>
-<span id="cb42-58"><a href="#cb42-58" aria-hidden="true" tabindex="-1"></a>    <span class="at">limits =</span> <span class="fu">c</span>(<span class="fu">as.Date</span>(<span class="st">"2020-04-01"</span>), <span class="fu">as.Date</span>(<span class="st">"2020-09-30"</span>))</span>
-<span id="cb42-59"><a href="#cb42-59" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">+</span></span>
-<span id="cb42-60"><a href="#cb42-60" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb42-61"><a href="#cb42-61" aria-hidden="true" tabindex="-1"></a>  <span class="co"># Circuit Breaker vertical lines and horizontal labels</span></span>
-<span id="cb42-62"><a href="#cb42-62" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_vline</span>(<span class="at">xintercept =</span> <span class="fu">as.Date</span>(<span class="st">"2020-04-07"</span>), <span class="at">linetype =</span> <span class="st">"dashed"</span>, <span class="at">color =</span> <span class="st">"black"</span>) <span class="sc">+</span></span>
-<span id="cb42-63"><a href="#cb42-63" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_vline</span>(<span class="at">xintercept =</span> <span class="fu">as.Date</span>(<span class="st">"2020-06-01"</span>), <span class="at">linetype =</span> <span class="st">"dashed"</span>, <span class="at">color =</span> <span class="st">"black"</span>) <span class="sc">+</span></span>
-<span id="cb42-64"><a href="#cb42-64" aria-hidden="true" tabindex="-1"></a>  <span class="fu">annotate</span>(<span class="st">"text"</span>, <span class="at">x =</span> <span class="fu">as.Date</span>(<span class="st">"2020-04-07"</span>), <span class="at">y =</span> <span class="dv">88</span>,</span>
-<span id="cb42-65"><a href="#cb42-65" aria-hidden="true" tabindex="-1"></a>           <span class="at">label =</span> <span class="st">"Start of Circuit Breaker"</span>, <span class="at">size =</span> <span class="dv">3</span>, <span class="at">color =</span> <span class="st">"black"</span>, <span class="at">hjust =</span> <span class="fl">0.5</span>) <span class="sc">+</span></span>
-<span id="cb42-66"><a href="#cb42-66" aria-hidden="true" tabindex="-1"></a>  <span class="fu">annotate</span>(<span class="st">"text"</span>, <span class="at">x =</span> <span class="fu">as.Date</span>(<span class="st">"2020-06-01"</span>), <span class="at">y =</span> <span class="dv">88</span>,</span>
-<span id="cb42-67"><a href="#cb42-67" aria-hidden="true" tabindex="-1"></a>           <span class="at">label =</span> <span class="st">"End of Circuit Breaker"</span>, <span class="at">size =</span> <span class="dv">3</span>, <span class="at">color =</span> <span class="st">"black"</span>, <span class="at">hjust =</span> <span class="fl">0.5</span>) <span class="sc">+</span></span>
-<span id="cb42-68"><a href="#cb42-68" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb42-69"><a href="#cb42-69" aria-hidden="true" tabindex="-1"></a>  <span class="co"># Disparity annotation</span></span>
-<span id="cb42-70"><a href="#cb42-70" aria-hidden="true" tabindex="-1"></a>  <span class="fu">annotate</span>(<span class="st">"text"</span>, <span class="at">x =</span> <span class="fu">as.Date</span>(<span class="st">"2020-06-01"</span>), <span class="at">y =</span> <span class="dv">55</span>,</span>
-<span id="cb42-71"><a href="#cb42-71" aria-hidden="true" tabindex="-1"></a>           <span class="at">label =</span> <span class="st">"Dormitories had up to</span><span class="sc">\n</span><span class="st">80× higher intensity"</span>,</span>
-<span id="cb42-72"><a href="#cb42-72" aria-hidden="true" tabindex="-1"></a>           <span class="at">color =</span> <span class="st">"steelblue"</span>, <span class="at">size =</span> <span class="dv">4</span>, <span class="at">hjust =</span> <span class="dv">0</span>) <span class="sc">+</span></span>
-<span id="cb42-73"><a href="#cb42-73" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb42-74"><a href="#cb42-74" aria-hidden="true" tabindex="-1"></a>  <span class="co"># Styling with expanded margins</span></span>
-<span id="cb42-75"><a href="#cb42-75" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme_minimal</span>(<span class="at">base_size =</span> <span class="dv">14</span>) <span class="sc">+</span></span>
-<span id="cb42-76"><a href="#cb42-76" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme</span>(</span>
-<span id="cb42-77"><a href="#cb42-77" aria-hidden="true" tabindex="-1"></a>    <span class="at">legend.position =</span> <span class="st">"top"</span>,</span>
-<span id="cb42-78"><a href="#cb42-78" aria-hidden="true" tabindex="-1"></a>    <span class="at">plot.title =</span> <span class="fu">element_text</span>(<span class="at">face =</span> <span class="st">"bold"</span>, <span class="at">size =</span> <span class="dv">16</span>),</span>
-<span id="cb42-79"><a href="#cb42-79" aria-hidden="true" tabindex="-1"></a>    <span class="at">plot.subtitle =</span> <span class="fu">element_text</span>(<span class="at">size =</span> <span class="dv">13</span>),</span>
-<span id="cb42-80"><a href="#cb42-80" aria-hidden="true" tabindex="-1"></a>    <span class="at">plot.margin =</span> <span class="fu">margin</span>(<span class="at">t =</span> <span class="dv">20</span>, <span class="at">r =</span> <span class="dv">20</span>, <span class="at">b =</span> <span class="dv">20</span>, <span class="at">l =</span> <span class="dv">20</span>)</span>
-<span id="cb42-81"><a href="#cb42-81" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">+</span></span>
-<span id="cb42-82"><a href="#cb42-82" aria-hidden="true" tabindex="-1"></a>  <span class="fu">labs</span>(</span>
-<span id="cb42-83"><a href="#cb42-83" aria-hidden="true" tabindex="-1"></a>    <span class="at">title =</span> <span class="st">"COVID-19 Case Rates Adjusted for Population Density"</span>,</span>
-<span id="cb42-84"><a href="#cb42-84" aria-hidden="true" tabindex="-1"></a>    <span class="at">subtitle =</span> <span class="st">"Cases per 100,000 people per km² (Apr–Sep 2020)"</span>,</span>
-<span id="cb42-85"><a href="#cb42-85" aria-hidden="true" tabindex="-1"></a>    <span class="at">x =</span> <span class="st">"Date"</span>,</span>
-<span id="cb42-86"><a href="#cb42-86" aria-hidden="true" tabindex="-1"></a>    <span class="at">y =</span> <span class="st">"Density-Adjusted Case Rate"</span>,</span>
-<span id="cb42-87"><a href="#cb42-87" aria-hidden="true" tabindex="-1"></a>    <span class="at">color =</span> <span class="st">"Population Group"</span></span>
-<span id="cb42-88"><a href="#cb42-88" aria-hidden="true" tabindex="-1"></a>  )</span>
-<span id="cb42-89"><a href="#cb42-89" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb42-90"><a href="#cb42-90" aria-hidden="true" tabindex="-1"></a><span class="co"># Save the plot (JPG or PNG)</span></span>
-<span id="cb42-91"><a href="#cb42-91" aria-hidden="true" tabindex="-1"></a><span class="fu">ggsave</span>(<span class="st">"covid_density_rates_sg.png"</span>,</span>
-<span id="cb42-92"><a href="#cb42-92" aria-hidden="true" tabindex="-1"></a>       <span class="at">plot =</span> density_plot,</span>
-<span id="cb42-93"><a href="#cb42-93" aria-hidden="true" tabindex="-1"></a>       <span class="at">width =</span> <span class="dv">10</span>, <span class="at">height =</span> <span class="dv">6</span>, <span class="at">dpi =</span> <span class="dv">300</span>,</span>
-<span id="cb42-94"><a href="#cb42-94" aria-hidden="true" tabindex="-1"></a>       <span class="at">device =</span> <span class="st">"png"</span>, <span class="at">bg =</span> <span class="st">"white"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<div class="cell-output cell-output-stderr">
-<pre><code>`geom_smooth()` using formula = 'y ~ x'</code></pre>
-</div>
-<div class="sourceCode cell-code" id="cb44"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb44-1"><a href="#cb44-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Optionally display</span></span>
-<span id="cb44-2"><a href="#cb44-2" aria-hidden="true" tabindex="-1"></a>density_plot</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<div class="cell-output cell-output-stderr">
-<pre><code>`geom_smooth()` using formula = 'y ~ x'</code></pre>
-</div>
-<div class="cell-output-display">
-<div>
-<figure class="figure">
-<p><img src="Tomato_Poster_Covid_files/figure-html/unnamed-chunk-6-1.png" class="img-fluid figure-img" width="672"></p>
-</figure>
-</div>
-</div>
-</div>
-<div class="cell">
-<div class="sourceCode cell-code" id="cb46"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb46-1"><a href="#cb46-1" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(tidyverse)</span>
-<span id="cb46-2"><a href="#cb46-2" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(lubridate)</span>
-<span id="cb46-3"><a href="#cb46-3" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(fmsb)</span>
-<span id="cb46-4"><a href="#cb46-4" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb46-5"><a href="#cb46-5" aria-hidden="true" tabindex="-1"></a><span class="co"># Summarise data with 3 severity metrics</span></span>
-<span id="cb46-6"><a href="#cb46-6" aria-hidden="true" tabindex="-1"></a>covid_radar <span class="ot">&lt;-</span> covid_clean <span class="sc">%&gt;%</span></span>
-<span id="cb46-7"><a href="#cb46-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(Date <span class="sc">&gt;=</span> <span class="fu">as.Date</span>(<span class="st">"2020-04-01"</span>) <span class="sc">&amp;</span> Date <span class="sc">&lt;=</span> <span class="fu">as.Date</span>(<span class="st">"2020-09-30"</span>)) <span class="sc">%&gt;%</span></span>
-<span id="cb46-8"><a href="#cb46-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">Month =</span> <span class="fu">format</span>(Date, <span class="st">"%b"</span>)) <span class="sc">%&gt;%</span></span>
-<span id="cb46-9"><a href="#cb46-9" aria-hidden="true" tabindex="-1"></a>  <span class="fu">group_by</span>(Month) <span class="sc">%&gt;%</span></span>
-<span id="cb46-10"><a href="#cb46-10" aria-hidden="true" tabindex="-1"></a>  <span class="fu">summarise</span>(</span>
-<span id="cb46-11"><a href="#cb46-11" aria-hidden="true" tabindex="-1"></a>    <span class="at">Deaths =</span> <span class="fu">sum</span>(<span class="st">`</span><span class="at">Daily Deaths</span><span class="st">`</span>, <span class="at">na.rm =</span> <span class="cn">TRUE</span>),</span>
-<span id="cb46-12"><a href="#cb46-12" aria-hidden="true" tabindex="-1"></a>    <span class="at">ICU =</span> <span class="fu">mean</span>(<span class="st">`</span><span class="at">Intensive Care Unit (ICU)</span><span class="st">`</span>, <span class="at">na.rm =</span> <span class="cn">TRUE</span>),</span>
-<span id="cb46-13"><a href="#cb46-13" aria-hidden="true" tabindex="-1"></a>    <span class="at">Hospitalised =</span> <span class="fu">mean</span>(<span class="st">`</span><span class="at">Still Hospitalised</span><span class="st">`</span>, <span class="at">na.rm =</span> <span class="cn">TRUE</span>)</span>
-<span id="cb46-14"><a href="#cb46-14" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">%&gt;%</span></span>
-<span id="cb46-15"><a href="#cb46-15" aria-hidden="true" tabindex="-1"></a>  <span class="fu">arrange</span>(<span class="fu">match</span>(Month, month.abb[<span class="dv">4</span><span class="sc">:</span><span class="dv">9</span>]))  <span class="co"># Order Apr–Sep</span></span>
-<span id="cb46-16"><a href="#cb46-16" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb46-17"><a href="#cb46-17" aria-hidden="true" tabindex="-1"></a><span class="co"># Radar chart needs first two rows to define max and min</span></span>
-<span id="cb46-18"><a href="#cb46-18" aria-hidden="true" tabindex="-1"></a>radar_data <span class="ot">&lt;-</span> <span class="fu">rbind</span>(</span>
-<span id="cb46-19"><a href="#cb46-19" aria-hidden="true" tabindex="-1"></a>  <span class="fu">apply</span>(covid_radar[, <span class="sc">-</span><span class="dv">1</span>], <span class="dv">2</span>, max),</span>
-<span id="cb46-20"><a href="#cb46-20" aria-hidden="true" tabindex="-1"></a>  <span class="fu">rep</span>(<span class="dv">0</span>, <span class="dv">3</span>),</span>
-<span id="cb46-21"><a href="#cb46-21" aria-hidden="true" tabindex="-1"></a>  covid_radar[, <span class="sc">-</span><span class="dv">1</span>]</span>
-<span id="cb46-22"><a href="#cb46-22" aria-hidden="true" tabindex="-1"></a>)</span>
-<span id="cb46-23"><a href="#cb46-23" aria-hidden="true" tabindex="-1"></a><span class="fu">rownames</span>(radar_data) <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="st">"Max"</span>, <span class="st">"Min"</span>, covid_radar<span class="sc">$</span>Month)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<div class="cell-output cell-output-stderr">
-<pre><code>Warning: Setting row names on a tibble is deprecated.</code></pre>
-</div>
-<div class="sourceCode cell-code" id="cb48"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb48-1"><a href="#cb48-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Plot radar chart</span></span>
-<span id="cb48-2"><a href="#cb48-2" aria-hidden="true" tabindex="-1"></a><span class="fu">radarchart</span>(</span>
-<span id="cb48-3"><a href="#cb48-3" aria-hidden="true" tabindex="-1"></a>  radar_data,</span>
-<span id="cb48-4"><a href="#cb48-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">axistype =</span> <span class="dv">1</span>,</span>
-<span id="cb48-5"><a href="#cb48-5" aria-hidden="true" tabindex="-1"></a>  <span class="at">pcol =</span> <span class="fu">c</span>(<span class="st">"firebrick"</span>, <span class="st">"darkblue"</span>, <span class="st">"darkgreen"</span>),</span>
-<span id="cb48-6"><a href="#cb48-6" aria-hidden="true" tabindex="-1"></a>  <span class="at">pfcol =</span> <span class="fu">c</span>(scales<span class="sc">::</span><span class="fu">alpha</span>(<span class="st">"firebrick"</span>, <span class="fl">0.3</span>), scales<span class="sc">::</span><span class="fu">alpha</span>(<span class="st">"darkblue"</span>, <span class="fl">0.3</span>), scales<span class="sc">::</span><span class="fu">alpha</span>(<span class="st">"darkgreen"</span>, <span class="fl">0.3</span>)),</span>
-<span id="cb48-7"><a href="#cb48-7" aria-hidden="true" tabindex="-1"></a>  <span class="at">plwd =</span> <span class="dv">2</span>,</span>
-<span id="cb48-8"><a href="#cb48-8" aria-hidden="true" tabindex="-1"></a>  <span class="at">plty =</span> <span class="dv">1</span>,</span>
-<span id="cb48-9"><a href="#cb48-9" aria-hidden="true" tabindex="-1"></a>  <span class="at">title =</span> <span class="st">"COVID-19 Severity Radar: Deaths, ICU, Hospitalisation (Apr–Sep 2020)"</span>,</span>
-<span id="cb48-10"><a href="#cb48-10" aria-hidden="true" tabindex="-1"></a>  <span class="at">cglcol =</span> <span class="st">"grey70"</span>, <span class="at">cglty =</span> <span class="dv">1</span>, <span class="at">cglwd =</span> <span class="fl">0.8</span>,</span>
-<span id="cb48-11"><a href="#cb48-11" aria-hidden="true" tabindex="-1"></a>  <span class="at">axislabcol =</span> <span class="st">"grey20"</span>, <span class="at">caxislabels =</span> <span class="fu">seq</span>(<span class="dv">0</span>, <span class="fu">max</span>(radar_data[<span class="dv">1</span>,]), <span class="at">length.out =</span> <span class="dv">5</span>),</span>
-<span id="cb48-12"><a href="#cb48-12" aria-hidden="true" tabindex="-1"></a>  <span class="at">vlcex =</span> <span class="fl">0.9</span></span>
-<span id="cb48-13"><a href="#cb48-13" aria-hidden="true" tabindex="-1"></a>)</span>
-<span id="cb48-14"><a href="#cb48-14" aria-hidden="true" tabindex="-1"></a><span class="fu">legend</span>(<span class="st">"topright"</span>, <span class="at">legend =</span> <span class="fu">c</span>(<span class="st">"Total Deaths"</span>, <span class="st">"Avg ICU"</span>, <span class="st">"Avg Hospitalised"</span>), </span>
-<span id="cb48-15"><a href="#cb48-15" aria-hidden="true" tabindex="-1"></a>       <span class="at">col =</span> <span class="fu">c</span>(<span class="st">"firebrick"</span>, <span class="st">"darkblue"</span>, <span class="st">"darkgreen"</span>), <span class="at">lty =</span> <span class="dv">1</span>, <span class="at">lwd =</span> <span class="dv">2</span>, <span class="at">bty =</span> <span class="st">"n"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<div class="cell-output-display">
-<div>
-<figure class="figure">
-<p><img src="Tomato_Poster_Covid_files/figure-html/unnamed-chunk-7-1.png" class="img-fluid figure-img" width="672"></p>
-</figure>
-</div>
-</div>
-</div>
+</section>
+</section>
+<section id="conclusion" class="level1">
+<h1>Conclusion</h1>
+<p>Through this visual analysis, we uncovered how COVID-19’s impact in Singapore varied not just over time, but across population groups and care outcomes. Dormitory outbreaks during early 2020 exposed systemic vulnerabilities, while community cases remained comparatively lower until later waves. By normalizing for population density and scaling severity outcomes, we provided a fairer lens to compare disproportionate risks and burdens. These findings emphasize the importance of equity-driven public health strategies where data transparency, targeted intervention, and structural reform are essential to protect the most vulnerable in future crises.</p>
+</section>
 
 </main>
 <!-- /main column -->
